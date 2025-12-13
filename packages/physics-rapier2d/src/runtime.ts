@@ -9,7 +9,6 @@
 export {
     RigidbodyType2D,
     CollisionDetectionMode2D,
-    type Vector2,
     type Physics2DConfig,
     DEFAULT_PHYSICS_CONFIG,
     CollisionLayer2D,
@@ -21,6 +20,9 @@ export {
     getPhysicsMaterialPreset,
     JointType2D
 } from './types/Physics2DTypes';
+
+// Re-export IVector2 from math package
+export type { IVector2 } from '@esengine/ecs-framework-math';
 
 export {
     type CollisionEventType,

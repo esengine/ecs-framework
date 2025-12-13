@@ -5,13 +5,18 @@
 export {
     COMPONENT_TYPE_NAME,
     COMPONENT_DEPENDENCIES,
+    COMPONENT_EDITOR_OPTIONS,
     getComponentTypeName,
     getComponentInstanceTypeName,
     getComponentDependencies,
+    getComponentEditorOptions,
+    getComponentInstanceEditorOptions,
+    isComponentHiddenInInspector,
+    isComponentInstanceHiddenInInspector,
     hasECSComponentDecorator
 } from '../Core/ComponentStorage/ComponentTypeUtils';
 
-export type { ComponentType } from '../Core/ComponentStorage/ComponentTypeUtils';
+export type { ComponentType, ComponentEditorOptions } from '../Core/ComponentStorage/ComponentTypeUtils';
 
 // ============================================================================
 // Type Decorators (ECSComponent, ECSSystem)
@@ -36,6 +41,8 @@ export {
     EntityRef,
     getEntityRefMetadata,
     hasEntityRef,
+    isEntityRefProperty,
+    getEntityRefProperties,
     ENTITY_REF_METADATA
 } from './EntityRefDecorator';
 
@@ -57,6 +64,6 @@ export type {
     PropertyType,
     PropertyControl,
     PropertyAction,
-    AssetType,
+    PropertyAssetType,
     EnumOption
 } from './PropertyDecorator';

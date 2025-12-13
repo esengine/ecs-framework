@@ -32,6 +32,7 @@ export default defineConfig({
                 'react-dom',
                 'react/jsx-runtime',
                 '@esengine/ecs-framework',
+                '@esengine/engine-core',      // TransformComponent 等核心组件
                 '@esengine/ecs-components',
                 '@esengine/tilemap',
                 '@esengine/ui',
@@ -39,6 +40,9 @@ export default defineConfig({
                 '@esengine/platform-web',
                 '@esengine/ecs-engine-bindgen',
                 '@esengine/asset-system',
+                '@esengine/sprite',           // SpriteComponent
+                '@esengine/camera',           // CameraComponent
+                '@esengine/material-system',
             ],
             output: {
                 exports: 'named',

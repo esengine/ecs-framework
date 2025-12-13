@@ -1,6 +1,6 @@
 import type { IScene, ServiceContainer } from '@esengine/ecs-framework';
 import { ComponentRegistry } from '@esengine/ecs-framework';
-import type { IRuntimeModule, IPlugin, ModuleManifest, SystemContext } from '@esengine/engine-core';
+import type { IRuntimeModule, IRuntimePlugin, ModuleManifest, SystemContext } from '@esengine/engine-core';
 import { AssetManagerToken } from '@esengine/asset-system';
 
 import { BehaviorTreeRuntimeComponent } from './execution/BehaviorTreeRuntimeComponent';
@@ -76,7 +76,7 @@ const manifest: ModuleManifest = {
     editorPackage: '@esengine/behavior-tree-editor'
 };
 
-export const BehaviorTreePlugin: IPlugin = {
+export const BehaviorTreePlugin: IRuntimePlugin = {
     manifest,
     runtimeModule: new BehaviorTreeRuntimeModule()
 };

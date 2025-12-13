@@ -13,7 +13,9 @@ import type { EntitySystem } from '../Systems';
 import { ComponentRegistry } from '../Core/ComponentStorage/ComponentRegistry';
 import {
     COMPONENT_TYPE_NAME,
-    COMPONENT_DEPENDENCIES
+    COMPONENT_DEPENDENCIES,
+    COMPONENT_EDITOR_OPTIONS,
+    type ComponentEditorOptions
 } from '../Core/ComponentStorage/ComponentTypeUtils';
 
 /**
@@ -29,6 +31,12 @@ export const SYSTEM_TYPE_NAME = Symbol('SystemTypeName');
 export interface ComponentOptions {
     /** 依赖的其他组件名称列表 | List of required component names */
     requires?: string[];
+
+    /**
+     * 编辑器相关选项
+     * Editor-related options
+     */
+    editor?: ComponentEditorOptions;
 }
 
 /**
@@ -72,6 +80,12 @@ export function ECSComponent(typeName: string, options?: ComponentOptions) {
         // Store dependencies
         if (options?.requires) {
             (target as any)[COMPONENT_DEPENDENCIES] = options.requires;
+        }
+
+        // 存储编辑器选项
+        // Store editor options
+        if (options?.editor) {
+            (target as any)[COMPONENT_EDITOR_OPTIONS] = options.editor;
         }
 
         // 自动注册到 ComponentRegistry，使组件可以通过名称查找

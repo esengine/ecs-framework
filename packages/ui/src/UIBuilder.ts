@@ -22,7 +22,8 @@ export interface UIBaseConfig {
     anchor?: AnchorPreset;
     visible?: boolean;
     alpha?: number;
-    zIndex?: number;
+    /** 层内排序顺序 | Order within layer */
+    orderInLayer?: number;
 }
 
 /**
@@ -156,7 +157,7 @@ export class UIBuilder {
         transform.height = config.height ?? 30;
         transform.visible = config.visible ?? true;
         transform.alpha = config.alpha ?? 1;
-        transform.zIndex = config.zIndex ?? 0;
+        transform.orderInLayer = config.orderInLayer ?? 0;
 
         if (config.anchor) {
             transform.setAnchorPreset(config.anchor);

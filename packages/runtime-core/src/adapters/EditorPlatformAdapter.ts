@@ -12,6 +12,7 @@ import type {
     PlatformCapabilities,
     PlatformAdapterConfig
 } from '../IPlatformAdapter';
+import type { IPlatformInputSubsystem } from '@esengine/platform-common';
 
 /**
  * 编辑器路径解析器
@@ -61,6 +62,14 @@ export interface EditorPlatformConfig {
     gizmoDataProvider?: (component: any, entity: any, isSelected: boolean) => any;
     /** Gizmo 检查函数 */
     hasGizmoProvider?: (component: any) => boolean;
+    /**
+     * 输入子系统工厂函数
+     * Input subsystem factory function
+     *
+     * 用于在 Play 模式下接收游戏输入
+     * Used to receive game input in Play mode
+     */
+    inputSubsystemFactory?: () => IPlatformInputSubsystem;
 }
 
 /**
@@ -84,6 +93,7 @@ export class EditorPlatformAdapter implements IPlatformAdapter {
     private _viewportSize = { width: 0, height: 0 };
     private _showGrid = true;
     private _showGizmos = true;
+    private _inputSubsystem: IPlatformInputSubsystem | null = null;
 
     constructor(config: EditorPlatformConfig) {
         this._config = config;
@@ -137,6 +147,12 @@ export class EditorPlatformAdapter implements IPlatformAdapter {
             this._canvas.height = height;
             this._viewportSize = { width, height };
         }
+
+        // 创建输入子系统（如果提供了工厂函数）
+        // Create input subsystem (if factory provided)
+        if (this._config.inputSubsystemFactory) {
+            this._inputSubsystem = this._config.inputSubsystemFactory();
+        }
     }
 
     async getWasmModule(): Promise<any> {
@@ -179,7 +195,22 @@ export class EditorPlatformAdapter implements IPlatformAdapter {
         return this._showGizmos;
     }
 
+    /**
+     * 获取输入子系统
+     * Get input subsystem
+     *
+     * 用于 InputSystem 接收游戏输入事件
+     * Used by InputSystem to receive game input events
+     */
+    getInputSubsystem(): IPlatformInputSubsystem | null {
+        return this._inputSubsystem;
+    }
+
     dispose(): void {
+        if (this._inputSubsystem) {
+            this._inputSubsystem.dispose?.();
+            this._inputSubsystem = null;
+        }
         this._canvas = null;
     }
 }

@@ -165,6 +165,33 @@ export class CommandManager {
         const batchCommand = new BatchCommand(commands);
         this.execute(batchCommand);
     }
+
+    /**
+     * 将命令推入撤销栈但不执行
+     * Push command to undo stack without executing
+     *
+     * 用于已经执行过的操作（如拖动变换），只需要记录到历史
+     * Used for operations that have already been performed (like drag transforms),
+     * only need to record to history
+     */
+    pushWithoutExecute(command: ICommand): void {
+        if (this.config.autoMerge && this.undoStack.length > 0) {
+            const lastCommand = this.undoStack[this.undoStack.length - 1];
+            if (lastCommand && lastCommand.canMergeWith(command)) {
+                const mergedCommand = lastCommand.mergeWith(command);
+                this.undoStack[this.undoStack.length - 1] = mergedCommand;
+                this.redoStack = [];
+                return;
+            }
+        }
+
+        this.undoStack.push(command);
+        this.redoStack = [];
+
+        if (this.undoStack.length > this.config.maxHistorySize) {
+            this.undoStack.shift();
+        }
+    }
 }
 
 /**

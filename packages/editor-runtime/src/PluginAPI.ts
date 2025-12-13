@@ -15,15 +15,14 @@
  * const assetManager = PluginAPI.resolve(AssetManagerToken);
  * ```
  *
- * 这个 API 会自动从全局 __ESENGINE__ 获取正确的实例，
+ * 这个 API 会自动从全局 __ESENGINE_SDK__ 获取正确的实例，
  * 避免模块实例不一致的问题。
- * This API automatically gets correct instances from global __ESENGINE__,
+ * This API automatically gets correct instances from global __ESENGINE_SDK__,
  * avoiding module instance inconsistency issues.
  */
 
 import type { EntityStoreService, MessageHub } from '@esengine/editor-core';
-import type { Scene, ServiceContainer } from '@esengine/ecs-framework';
-import type { ServiceToken } from '@esengine/engine-core';
+import type { Scene, ServiceContainer, ServiceToken } from '@esengine/ecs-framework';
 
 /**
  * 核心服务接口
@@ -40,8 +39,8 @@ interface ICoreServices {
  * 内部 API 接口定义
  * Internal API interface definition
  *
- * 定义全局 __ESENGINE__.api 提供的方法。
- * Defines methods provided by global __ESENGINE__.api.
+ * 定义全局 __ESENGINE_SDK__.api 提供的方法。
+ * Defines methods provided by global __ESENGINE_SDK__.api.
  */
 interface IPluginAPIInternal {
     /** 获取当前场景 | Get current scene */
@@ -63,7 +62,7 @@ interface IPluginAPIInternal {
 // 声明全局类型
 declare global {
     interface Window {
-        __ESENGINE__?: {
+        __ESENGINE_SDK__?: {
             api?: IPluginAPIInternal;
             [key: string]: any;
         };
@@ -74,7 +73,7 @@ declare global {
  * 获取内部 API
  */
 function getInternalAPI(): IPluginAPIInternal {
-    const api = window.__ESENGINE__?.api;
+    const api = window.__ESENGINE_SDK__?.api;
     if (!api) {
         throw new Error('[PluginAPI] 插件 API 未初始化，请确保编辑器已正确启动');
     }
@@ -151,6 +150,6 @@ export const PluginAPI = {
      * 检查 API 是否可用
      */
     get isAvailable(): boolean {
-        return !!window.__ESENGINE__?.api;
+        return !!window.__ESENGINE_SDK__?.api;
     },
 };

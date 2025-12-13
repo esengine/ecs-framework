@@ -1,6 +1,6 @@
 import type { IScene } from '@esengine/ecs-framework';
 import { ComponentRegistry } from '@esengine/ecs-framework';
-import type { IRuntimeModule, IPlugin, ModuleManifest, SystemContext } from '@esengine/engine-core';
+import type { IRuntimeModule, IRuntimePlugin, ModuleManifest, SystemContext } from '@esengine/engine-core';
 import { EngineBridgeToken } from '@esengine/ecs-engine-bindgen';
 
 import {
@@ -122,7 +122,7 @@ const manifest: ModuleManifest = {
     editorPackage: '@esengine/ui-editor'
 };
 
-export const UIPlugin: IPlugin = {
+export const UIPlugin: IRuntimePlugin = {
     manifest,
     runtimeModule: new UIRuntimeModule()
 };

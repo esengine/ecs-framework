@@ -4,8 +4,8 @@
  */
 
 import { Component, Property, Serialize, Serializable, ECSComponent } from '@esengine/ecs-framework';
+import type { IVector2 } from '@esengine/ecs-framework-math';
 import { RigidbodyType2D, CollisionDetectionMode2D } from '../types/Physics2DTypes';
-import type { Vector2 } from '../types/Physics2DTypes';
 
 /**
  * 刚体约束配置
@@ -171,7 +171,7 @@ export class Rigidbody2DComponent extends Component {
     /**
      * 当前线速度
      */
-    public velocity: Vector2 = { x: 0, y: 0 };
+    public velocity: IVector2 = { x: 0, y: 0 };
 
     /**
      * 当前角速度（弧度/秒）
@@ -196,7 +196,7 @@ export class Rigidbody2DComponent extends Component {
      * 上一帧的位置（用于插值）
      * @internal
      */
-    public _previousPosition: Vector2 = { x: 0, y: 0 };
+    public _previousPosition: IVector2 = { x: 0, y: 0 };
 
     /**
      * 上一帧的旋转角度
@@ -210,7 +210,7 @@ export class Rigidbody2DComponent extends Component {
      * 添加力（在下一个物理步进中应用）
      * 这是一个标记方法，实际力的应用由 Physics2DSystem 处理
      */
-    public addForce(force: Vector2): void {
+    public addForce(force: IVector2): void {
         this._pendingForce.x += force.x;
         this._pendingForce.y += force.y;
     }
@@ -218,7 +218,7 @@ export class Rigidbody2DComponent extends Component {
     /**
      * 添加冲量（立即改变速度）
      */
-    public addImpulse(impulse: Vector2): void {
+    public addImpulse(impulse: IVector2): void {
         this._pendingImpulse.x += impulse.x;
         this._pendingImpulse.y += impulse.y;
     }
@@ -240,7 +240,7 @@ export class Rigidbody2DComponent extends Component {
     /**
      * 设置线速度
      */
-    public setVelocity(velocity: Vector2): void {
+    public setVelocity(velocity: IVector2): void {
         this._targetVelocity = { ...velocity };
         this._hasTargetVelocity = true;
     }
@@ -277,15 +277,15 @@ export class Rigidbody2DComponent extends Component {
     // ==================== 待处理的力和冲量 ====================
 
     /** @internal */
-    public _pendingForce: Vector2 = { x: 0, y: 0 };
+    public _pendingForce: IVector2 = { x: 0, y: 0 };
     /** @internal */
-    public _pendingImpulse: Vector2 = { x: 0, y: 0 };
+    public _pendingImpulse: IVector2 = { x: 0, y: 0 };
     /** @internal */
     public _pendingTorque: number = 0;
     /** @internal */
     public _pendingAngularImpulse: number = 0;
     /** @internal */
-    public _targetVelocity: Vector2 = { x: 0, y: 0 };
+    public _targetVelocity: IVector2 = { x: 0, y: 0 };
     /** @internal */
     public _hasTargetVelocity: boolean = false;
     /** @internal */

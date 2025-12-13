@@ -1,14 +1,12 @@
 import { Component, ECSComponent, Serializable, Serialize, Property } from '@esengine/ecs-framework';
-
-export interface Vector3 {
-    x: number;
-    y: number;
-    z: number;
-}
+import type { IVector3 } from '@esengine/ecs-framework-math';
 
 /**
  * 3x3 矩阵（用于 2D 变换：旋转 + 缩放）
  * 实际存储为 [a, b, c, d, tx, ty] 形式的仿射变换
+ *
+ * 3x3 matrix for 2D transforms (rotation + scale).
+ * Stored as affine transform [a, b, c, d, tx, ty].
  */
 export interface Matrix2D {
     a: number;   // scaleX * cos(rotation)
@@ -24,27 +22,27 @@ export interface Matrix2D {
 export class TransformComponent extends Component {
     @Serialize()
     @Property({ type: 'vector3', label: 'Position' })
-    position: Vector3 = { x: 0, y: 0, z: 0 };
+    position: IVector3 = { x: 0, y: 0, z: 0 };
 
     /** 欧拉角，单位：度 */
     @Serialize()
     @Property({ type: 'vector3', label: 'Rotation' })
-    rotation: Vector3 = { x: 0, y: 0, z: 0 };
+    rotation: IVector3 = { x: 0, y: 0, z: 0 };
 
     @Serialize()
     @Property({ type: 'vector3', label: 'Scale' })
-    scale: Vector3 = { x: 1, y: 1, z: 1 };
+    scale: IVector3 = { x: 1, y: 1, z: 1 };
 
     // ===== 世界变换（由 TransformSystem 计算）=====
 
     /** 世界位置（只读，由 TransformSystem 计算） */
-    worldPosition: Vector3 = { x: 0, y: 0, z: 0 };
+    worldPosition: IVector3 = { x: 0, y: 0, z: 0 };
 
     /** 世界旋转（只读，由 TransformSystem 计算） */
-    worldRotation: Vector3 = { x: 0, y: 0, z: 0 };
+    worldRotation: IVector3 = { x: 0, y: 0, z: 0 };
 
     /** 世界缩放（只读，由 TransformSystem 计算） */
-    worldScale: Vector3 = { x: 1, y: 1, z: 1 };
+    worldScale: IVector3 = { x: 1, y: 1, z: 1 };
 
     /** 本地到世界的 2D 变换矩阵（只读，由 TransformSystem 计算） */
     localToWorldMatrix: Matrix2D = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };

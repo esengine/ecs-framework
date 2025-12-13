@@ -275,6 +275,36 @@ impl GameEngine {
         vec![x, y, zoom, rotation]
     }
 
+    /// Convert screen coordinates to world coordinates.
+    /// 将屏幕坐标转换为世界坐标。
+    ///
+    /// # Arguments | 参数
+    /// * `screen_x` - Screen X coordinate (0 = left edge of canvas)
+    /// * `screen_y` - Screen Y coordinate (0 = top edge of canvas)
+    ///
+    /// # Returns | 返回
+    /// Array of [world_x, world_y] | 数组 [world_x, world_y]
+    #[wasm_bindgen(js_name = screenToWorld)]
+    pub fn screen_to_world(&self, screen_x: f32, screen_y: f32) -> Vec<f32> {
+        let (x, y) = self.engine.screen_to_world(screen_x, screen_y);
+        vec![x, y]
+    }
+
+    /// Convert world coordinates to screen coordinates.
+    /// 将世界坐标转换为屏幕坐标。
+    ///
+    /// # Arguments | 参数
+    /// * `world_x` - World X coordinate
+    /// * `world_y` - World Y coordinate
+    ///
+    /// # Returns | 返回
+    /// Array of [screen_x, screen_y] | 数组 [screen_x, screen_y]
+    #[wasm_bindgen(js_name = worldToScreen)]
+    pub fn world_to_screen(&self, world_x: f32, world_y: f32) -> Vec<f32> {
+        let (x, y) = self.engine.world_to_screen(world_x, world_y);
+        vec![x, y]
+    }
+
     /// Set grid visibility.
     /// 设置网格可见性。
     #[wasm_bindgen(js_name = setShowGrid)]
@@ -628,5 +658,32 @@ impl GameEngine {
     #[wasm_bindgen(js_name = setMaterialBlendMode)]
     pub fn set_material_blend_mode(&mut self, material_id: u32, blend_mode: u8) -> bool {
         self.engine.set_material_blend_mode(material_id, blend_mode)
+    }
+
+    // ===== Texture Cache API =====
+    // ===== 纹理缓存 API =====
+
+    /// Clear the texture path cache.
+    /// 清除纹理路径缓存。
+    ///
+    /// This should be called when restoring scene snapshots to ensure
+    /// textures are reloaded with correct IDs.
+    /// 在恢复场景快照时应调用此方法，以确保纹理使用正确的ID重新加载。
+    #[wasm_bindgen(js_name = clearTexturePathCache)]
+    pub fn clear_texture_path_cache(&mut self) {
+        self.engine.clear_texture_path_cache();
+    }
+
+    /// Clear all textures and reset state.
+    /// 清除所有纹理并重置状态。
+    ///
+    /// This removes all loaded textures from GPU memory and resets
+    /// the ID counter. Use with caution as all texture references
+    /// will become invalid.
+    /// 这会从GPU内存中移除所有已加载的纹理并重置ID计数器。
+    /// 请谨慎使用，因为所有纹理引用都将变得无效。
+    #[wasm_bindgen(js_name = clearAllTextures)]
+    pub fn clear_all_textures(&mut self) {
+        self.engine.clear_all_textures();
     }
 }

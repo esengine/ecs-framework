@@ -11,8 +11,8 @@ export class TauriFileAPI implements IFileAPI {
         return await TauriAPI.openSceneDialog();
     }
 
-    public async saveSceneDialog(defaultName?: string): Promise<string | null> {
-        return await TauriAPI.saveSceneDialog(defaultName);
+    public async saveSceneDialog(defaultName?: string, scenesDir?: string): Promise<string | null> {
+        return await TauriAPI.saveSceneDialog(defaultName, scenesDir);
     }
 
     public async readFileContent(path: string): Promise<string> {

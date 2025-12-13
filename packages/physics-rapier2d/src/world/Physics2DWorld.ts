@@ -6,9 +6,9 @@
  */
 
 import type RAPIER from '@esengine/rapier2d';
+import type { IVector2 } from '@esengine/ecs-framework-math';
 import type {
     Physics2DConfig,
-    Vector2,
     RaycastHit2D,
     OverlapResult2D
 } from '../types/Physics2DTypes';
@@ -202,7 +202,7 @@ export class Physics2DWorld {
     public createBody(
         entityId: number,
         rigidbody: Rigidbody2DComponent,
-        position: Vector2,
+        position: IVector2,
         rotation: number
     ): number | null {
         if (!this._world || !this._rapier) return null;
@@ -299,7 +299,7 @@ export class Physics2DWorld {
      * @param position 位置
      * @param rotation 旋转
      */
-    public setBodyTransform(handle: number, position: Vector2, rotation: number): void {
+    public setBodyTransform(handle: number, position: IVector2, rotation: number): void {
         if (!this._world || !this._rapier) return;
 
         const body = this._world.getRigidBody(handle);
@@ -313,7 +313,7 @@ export class Physics2DWorld {
      * 获取刚体位置
      * @param handle 刚体句柄
      */
-    public getBodyPosition(handle: number): Vector2 | null {
+    public getBodyPosition(handle: number): IVector2 | null {
         if (!this._world) return null;
 
         const body = this._world.getRigidBody(handle);
@@ -340,7 +340,7 @@ export class Physics2DWorld {
      * 获取刚体速度
      * @param handle 刚体句柄
      */
-    public getBodyVelocity(handle: number): Vector2 | null {
+    public getBodyVelocity(handle: number): IVector2 | null {
         if (!this._world) return null;
 
         const body = this._world.getRigidBody(handle);
@@ -368,7 +368,7 @@ export class Physics2DWorld {
      * @param handle 刚体句柄
      * @param force 力向量
      */
-    public applyForce(handle: number, force: Vector2): void {
+    public applyForce(handle: number, force: IVector2): void {
         if (!this._world || !this._rapier) return;
 
         const body = this._world.getRigidBody(handle);
@@ -382,7 +382,7 @@ export class Physics2DWorld {
      * @param handle 刚体句柄
      * @param impulse 冲量向量
      */
-    public applyImpulse(handle: number, impulse: Vector2): void {
+    public applyImpulse(handle: number, impulse: IVector2): void {
         if (!this._world || !this._rapier) return;
 
         const body = this._world.getRigidBody(handle);
@@ -424,7 +424,7 @@ export class Physics2DWorld {
      * @param handle 刚体句柄
      * @param velocity 速度向量
      */
-    public setVelocity(handle: number, velocity: Vector2): void {
+    public setVelocity(handle: number, velocity: IVector2): void {
         if (!this._world || !this._rapier) return;
 
         const body = this._world.getRigidBody(handle);
@@ -482,7 +482,7 @@ export class Physics2DWorld {
      * @param bodyHandle 关联的刚体句柄（可选）
      * @param scale Transform 的缩放值（可选）
      */
-    public createCollider(entityId: number, collider: Collider2DBase, bodyHandle?: number, scale?: Vector2): number | null {
+    public createCollider(entityId: number, collider: Collider2DBase, bodyHandle?: number, scale?: IVector2): number | null {
         if (!this._world || !this._rapier) return null;
 
         // 创建碰撞体描述
@@ -524,8 +524,8 @@ export class Physics2DWorld {
      */
     public createStaticCollider(
         entityId: number,
-        position: Vector2,
-        halfExtents: Vector2,
+        position: IVector2,
+        halfExtents: IVector2,
         collisionLayer: number,
         collisionMask: number,
         friction: number,
@@ -635,8 +635,8 @@ export class Physics2DWorld {
      * @param collisionMask 碰撞掩码
      */
     public raycast(
-        origin: Vector2,
-        direction: Vector2,
+        origin: IVector2,
+        direction: IVector2,
         maxDistance: number,
         collisionMask: number = 0xffff
     ): RaycastHit2D | null {
@@ -687,8 +687,8 @@ export class Physics2DWorld {
      * @param collisionMask 碰撞掩码
      */
     public raycastAll(
-        origin: Vector2,
-        direction: Vector2,
+        origin: IVector2,
+        direction: IVector2,
         maxDistance: number,
         collisionMask: number = 0xffff
     ): RaycastHit2D[] {
@@ -731,7 +731,7 @@ export class Physics2DWorld {
      * @param point 检测点
      * @param collisionMask 碰撞掩码
      */
-    public overlapPoint(point: Vector2, collisionMask: number = 0xffff): OverlapResult2D {
+    public overlapPoint(point: IVector2, collisionMask: number = 0xffff): OverlapResult2D {
         if (!this._world || !this._rapier) {
             return { entityIds: [], colliderHandles: [] };
         }
@@ -757,7 +757,7 @@ export class Physics2DWorld {
      * @param radius 半径
      * @param collisionMask 碰撞掩码
      */
-    public overlapCircle(center: Vector2, radius: number, collisionMask: number = 0xffff): OverlapResult2D {
+    public overlapCircle(center: IVector2, radius: number, collisionMask: number = 0xffff): OverlapResult2D {
         if (!this._world || !this._rapier) {
             return { entityIds: [], colliderHandles: [] };
         }
@@ -788,8 +788,8 @@ export class Physics2DWorld {
      * @param collisionMask 碰撞掩码
      */
     public overlapBox(
-        center: Vector2,
-        halfExtents: Vector2,
+        center: IVector2,
+        halfExtents: IVector2,
         rotation: number = 0,
         collisionMask: number = 0xffff
     ): OverlapResult2D {
@@ -847,7 +847,7 @@ export class Physics2DWorld {
      * 设置重力
      * @param gravity 重力向量
      */
-    public setGravity(gravity: Vector2): void {
+    public setGravity(gravity: IVector2): void {
         if (!this._world || !this._rapier) return;
 
         this._config.gravity = gravity;
@@ -857,7 +857,7 @@ export class Physics2DWorld {
     /**
      * 获取重力
      */
-    public getGravity(): Vector2 {
+    public getGravity(): IVector2 {
         return { ...this._config.gravity };
     }
 
@@ -971,7 +971,7 @@ export class Physics2DWorld {
     /**
      * 创建碰撞体描述
      */
-    private _createColliderDesc(collider: Collider2DBase, scale?: Vector2): RAPIER.ColliderDesc | null {
+    private _createColliderDesc(collider: Collider2DBase, scale?: IVector2): RAPIER.ColliderDesc | null {
         if (!this._rapier) return null;
 
         const sx = scale?.x ?? 1;

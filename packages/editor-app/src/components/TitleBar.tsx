@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { UIRegistry, MessageHub, PluginManager } from '@esengine/editor-core';
+import { UIRegistry, MessageHub, PluginManager, CommandManager } from '@esengine/editor-core';
 import type { MenuItem as PluginMenuItem } from '@esengine/editor-core';
 import * as LucideIcons from 'lucide-react';
 import { useLocale } from '../hooks/useLocale';
@@ -21,6 +21,7 @@ interface TitleBarProps {
     uiRegistry?: UIRegistry;
     messageHub?: MessageHub;
     pluginManager?: PluginManager;
+    commandManager?: CommandManager;
     onNewScene?: () => void;
     onOpenScene?: () => void;
     onSaveScene?: () => void;
@@ -44,6 +45,7 @@ export function TitleBar({
     uiRegistry,
     messageHub,
     pluginManager,
+    commandManager,
     onNewScene,
     onOpenScene,
     onSaveScene,
@@ -65,8 +67,41 @@ export function TitleBar({
     const [openMenu, setOpenMenu] = useState<string | null>(null);
     const [pluginMenuItems, setPluginMenuItems] = useState<PluginMenuItem[]>([]);
     const [isMaximized, setIsMaximized] = useState(false);
+    const [canUndo, setCanUndo] = useState(false);
+    const [canRedo, setCanRedo] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const appWindow = getCurrentWindow();
+
+    // Update undo/redo state | 更新撤销/重做状态
+    const updateUndoRedoState = useCallback(() => {
+        if (commandManager) {
+            setCanUndo(commandManager.canUndo());
+            setCanRedo(commandManager.canRedo());
+        }
+    }, [commandManager]);
+
+    // Handle undo | 处理撤销
+    const handleUndo = useCallback(() => {
+        if (commandManager && commandManager.canUndo()) {
+            commandManager.undo();
+            updateUndoRedoState();
+        }
+    }, [commandManager, updateUndoRedoState]);
+
+    // Handle redo | 处理重做
+    const handleRedo = useCallback(() => {
+        if (commandManager && commandManager.canRedo()) {
+            commandManager.redo();
+            updateUndoRedoState();
+        }
+    }, [commandManager, updateUndoRedoState]);
+
+    // Update undo/redo state periodically | 定期更新撤销/重做状态
+    useEffect(() => {
+        updateUndoRedoState();
+        const interval = setInterval(updateUndoRedoState, 100);
+        return () => clearInterval(interval);
+    }, [updateUndoRedoState]);
 
     const updateMenuItems = () => {
         if (uiRegistry) {
@@ -135,8 +170,8 @@ export function TitleBar({
             { label: t('menu.file.exit'), onClick: onExit }
         ],
         edit: [
-            { label: t('menu.edit.undo'), shortcut: 'Ctrl+Z', disabled: true },
-            { label: t('menu.edit.redo'), shortcut: 'Ctrl+Y', disabled: true },
+            { label: t('menu.edit.undo'), shortcut: 'Ctrl+Z', disabled: !canUndo, onClick: handleUndo },
+            { label: t('menu.edit.redo'), shortcut: 'Ctrl+Y', disabled: !canRedo, onClick: handleRedo },
             { separator: true },
             { label: t('menu.edit.cut'), shortcut: 'Ctrl+X', disabled: true },
             { label: t('menu.edit.copy'), shortcut: 'Ctrl+C', disabled: true },

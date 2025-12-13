@@ -9,6 +9,7 @@ import type {
     IAssetParseContext,
     AssetContentType
 } from '@esengine/asset-system';
+import { SortingLayers } from '@esengine/engine-core';
 import { EmissionShape, type ColorValue } from '../ParticleEmitter';
 import { ParticleBlendMode } from '../ParticleSystemComponent';
 
@@ -121,12 +122,18 @@ export interface IParticleAsset {
     particleSize: number;
     /** 混合模式 | Blend mode */
     blendMode: ParticleBlendMode;
-    /** 排序顺序 | Sorting order */
-    sortingOrder: number;
+    /**
+     * 排序层名称
+     * Sorting layer name
+     */
+    sortingLayer: string;
+    /**
+     * 层内排序顺序
+     * Order within the sorting layer
+     */
+    orderInLayer: number;
     /** 纹理资产 GUID | Texture asset GUID */
     textureGuid?: string;
-    /** 纹理路径（编辑器兼容）| Texture path (editor compatibility) */
-    texturePath?: string;
 
     // 模块配置 | Module configurations
     /** 模块列表 | Module list */
@@ -186,7 +193,8 @@ export function createDefaultParticleAsset(name: string = 'New Particle'): IPart
 
         particleSize: 8,
         blendMode: ParticleBlendMode.Normal,
-        sortingOrder: 0,
+        sortingLayer: SortingLayers.Default,
+        orderInLayer: 0,
 
         modules: [],
     };

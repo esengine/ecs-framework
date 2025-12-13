@@ -13,7 +13,7 @@ export type EasingFunction = (t: number) => number;
  * 预定义缓动函数
  * Predefined easing functions
  */
-export const Easing = {
+export const UIEasing = {
     linear: (t: number) => t,
 
     // Quad
@@ -126,7 +126,10 @@ export const Easing = {
  * 缓动函数名称映射
  * Easing function name mapping
  */
-export type EasingName = keyof typeof Easing;
+export type EasingName = keyof typeof UIEasing;
+
+/** @deprecated Use UIEasing instead */
+export const Easing = UIEasing;
 
 /**
  * UI 动画系统

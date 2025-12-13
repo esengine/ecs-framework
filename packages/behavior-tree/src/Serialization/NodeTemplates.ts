@@ -14,9 +14,10 @@ export interface NodeDataJSON {
 }
 
 /**
- * 内置属性类型常量
+ * 行为树节点属性类型常量
+ * Behavior tree node property type constants
  */
-export const PropertyType = {
+export const NodePropertyType = {
     /** 字符串 */
     String: 'string',
     /** 数值 */
@@ -36,26 +37,27 @@ export const PropertyType = {
 } as const;
 
 /**
- * 属性类型（支持自定义扩展）
+ * 节点属性类型（支持自定义扩展）
+ * Node property type (supports custom extensions)
  *
  * @example
  * ```typescript
  * // 使用内置类型
- * type: PropertyType.String
+ * type: NodePropertyType.String
  *
  * // 使用自定义类型
  * type: 'color-picker'
  * type: 'curve-editor'
  * ```
  */
-export type PropertyType = (typeof PropertyType)[keyof typeof PropertyType] | string;
+export type NodePropertyType = (typeof NodePropertyType)[keyof typeof NodePropertyType] | string;
 
 /**
  * 属性定义（用于编辑器）
  */
 export interface PropertyDefinition {
     name: string;
-    type: PropertyType;
+    type: NodePropertyType;
     label: string;
     description?: string;
     defaultValue?: any;
@@ -342,22 +344,22 @@ export class NodeTemplates {
     /**
      * 映射字段类型到属性类型
      */
-    private static mapFieldTypeToPropertyType(field: ConfigFieldDefinition): PropertyType {
+    private static mapFieldTypeToPropertyType(field: ConfigFieldDefinition): NodePropertyType {
         if (field.options && field.options.length > 0) {
-            return PropertyType.Select;
+            return NodePropertyType.Select;
         }
 
         switch (field.type) {
             case 'string':
-                return PropertyType.String;
+                return NodePropertyType.String;
             case 'number':
-                return PropertyType.Number;
+                return NodePropertyType.Number;
             case 'boolean':
-                return PropertyType.Boolean;
+                return NodePropertyType.Boolean;
             case 'array':
             case 'object':
             default:
-                return PropertyType.String;
+                return NodePropertyType.String;
         }
     }
 

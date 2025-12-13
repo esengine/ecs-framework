@@ -13,7 +13,7 @@ import {
     Maximize2, Minimize2, MousePointer2, Target, Zap
 } from 'lucide-react';
 import { Core } from '@esengine/ecs-framework';
-import { MessageHub, IFileSystemService, IDialogService } from '@esengine/editor-core';
+import { MessageHub, IFileSystemService, IDialogService, AssetRegistryService } from '@esengine/editor-core';
 import type { IFileSystem, IDialog } from '@esengine/editor-core';
 import {
     EmissionShape,
@@ -34,10 +34,14 @@ import {
     type ScaleKey,
     type ForceField,
 } from '@esengine/particle';
+import { PathResolutionService } from '@esengine/asset-system';
 import { useParticleEditorStore } from '../stores/ParticleEditorStore';
 import { GradientEditor } from '../components/GradientEditor';
 import { CurveEditor } from '../components/CurveEditor';
 import { TexturePicker } from '../components/TexturePicker';
+
+// 创建路径解析服务实例 | Create path resolution service instance
+const pathResolver = new PathResolutionService();
 
 // ============= Types =============
 
@@ -220,8 +224,60 @@ function useParticlePreview(
     const elapsedTimeRef = useRef<number>(0);
     const burstFiredRef = useRef<Set<number>>(new Set());
     const lastTriggerBurstRef = useRef<number>(0);
+    const textureImageRef = useRef<HTMLImageElement | null>(null);
+    const textureLoadedRef = useRef<string | null>(null); // 记录已加载的 GUID | Track loaded GUID
 
     const { followMouse, mousePosition, triggerBurst } = options;
+
+    // 加载纹理图片 | Load texture image
+    useEffect(() => {
+        const textureGuid = data?.textureGuid;
+        if (!textureGuid) {
+            textureImageRef.current = null;
+            textureLoadedRef.current = null;
+            return;
+        }
+
+        // 如果已经加载了相同的纹理，跳过 | Skip if same texture already loaded
+        if (textureLoadedRef.current === textureGuid) {
+            return;
+        }
+
+        // 通过 AssetRegistryService 解析 GUID 到路径 | Resolve GUID to path via AssetRegistryService
+        const assetRegistry = Core.services.tryResolve(AssetRegistryService) as AssetRegistryService | null;
+        if (!assetRegistry) {
+            console.warn('[ParticlePreview] AssetRegistryService not available');
+            return;
+        }
+
+        const metadata = assetRegistry.getAsset(textureGuid);
+        if (!metadata) {
+            console.warn('[ParticlePreview] Asset not found for GUID:', textureGuid);
+            return;
+        }
+
+        // 使用 PathResolutionService 将资产路径转换为可加载的 URL
+        // Use PathResolutionService to convert asset path to loadable URL
+        const textureUrl = pathResolver.catalogToRuntime(metadata.path);
+
+        const img = document.createElement('img');
+        img.onload = () => {
+            textureImageRef.current = img;
+            textureLoadedRef.current = textureGuid;
+        };
+        img.onerror = () => {
+            console.error('[ParticlePreview] Failed to load texture:', textureUrl);
+            textureImageRef.current = null;
+            textureLoadedRef.current = null;
+        };
+        img.src = textureUrl;
+
+        return () => {
+            // 清理 | Cleanup
+            img.onload = null;
+            img.onerror = null;
+        };
+    }, [data?.textureGuid]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -821,6 +877,7 @@ function useParticlePreview(
             }
 
             // 绘制粒子 | Draw particles
+            const textureImg = textureImageRef.current;
             for (const p of particlesRef.current) {
                 const size = (data.particleSize || 8);
                 const r = Math.round(clamp(p.r, 0, 1) * 255);
@@ -834,15 +891,22 @@ function useParticlePreview(
                 ctx.rotate(p.rotation);
                 ctx.scale(p.scaleX, p.scaleY);
 
-                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, size / 2);
-                gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 1)`);
-                gradient.addColorStop(0.6, `rgba(${r}, ${g}, ${b}, 0.6)`);
-                gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+                // 如果有纹理，绘制纹理图片；否则绘制渐变圆 | Draw texture if available, otherwise gradient circle
+                if (textureImg) {
+                    // 绘制带颜色调制的纹理 | Draw texture with color modulation
+                    const halfSize = size / 2;
+                    ctx.drawImage(textureImg, -halfSize, -halfSize, size, size);
+                } else {
+                    const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, size / 2);
+                    gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 1)`);
+                    gradient.addColorStop(0.6, `rgba(${r}, ${g}, ${b}, 0.6)`);
+                    gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
 
-                ctx.fillStyle = gradient;
-                ctx.beginPath();
-                ctx.arc(0, 0, size / 2, 0, Math.PI * 2);
-                ctx.fill();
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, size / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
 
                 ctx.restore();
             }
@@ -1092,9 +1156,24 @@ interface PropertySectionProps {
 
 interface BasicPropertiesProps extends PropertySectionProps {
     onBrowseTexture?: () => Promise<string | null>;
+    /** 通过 GUID 获取资产显示名称 | Get asset display name by GUID */
+    resolveGuidToName?: (guid: string) => string | null;
 }
 
-function BasicProperties({ data, onChange, onBrowseTexture }: BasicPropertiesProps) {
+function BasicProperties({ data, onChange, onBrowseTexture, resolveGuidToName }: BasicPropertiesProps) {
+    // 调试日志 | Debug log
+
+    // 解析 textureGuid 为显示名称 | Resolve textureGuid to display name
+    const textureDisplayName = useMemo(() => {
+        if (!data.textureGuid) return null;
+        if (resolveGuidToName) {
+            const name = resolveGuidToName(data.textureGuid);
+            return name;
+        }
+        // 如果没有解析函数，显示 GUID 的前8位 | If no resolver, show first 8 chars of GUID
+        return data.textureGuid.substring(0, 8) + '...';
+    }, [data.textureGuid, resolveGuidToName]);
+
     return (
         <div className="property-group">
             <PropertyInput
@@ -1104,8 +1183,8 @@ function BasicProperties({ data, onChange, onBrowseTexture }: BasicPropertiesPro
                 onChange={v => onChange('name', v)}
             />
             <TexturePicker
-                value={(data as any).texturePath || null}
-                onChange={path => onChange('texturePath' as any, path)}
+                value={textureDisplayName}
+                onChange={() => {/* GUID 通过 onBrowse 设置 | GUID is set via onBrowse */}}
                 onBrowse={onBrowseTexture}
             />
             <PropertyInput
@@ -1172,11 +1251,25 @@ function BasicProperties({ data, onChange, onBrowseTexture }: BasicPropertiesPro
                 min={1}
                 onChange={v => onChange('particleSize', v)}
             />
+            <PropertySelect
+                label="Sorting Layer"
+                value={data.sortingLayer || 'Default'}
+                options={[
+                    { value: 'Background', label: 'Background' },
+                    { value: 'Default', label: 'Default' },
+                    { value: 'Foreground', label: 'Foreground' },
+                    { value: 'WorldOverlay', label: 'World Overlay' },
+                    { value: 'UI', label: 'UI' },
+                    { value: 'ScreenOverlay', label: 'Screen Overlay' },
+                    { value: 'Modal', label: 'Modal' },
+                ]}
+                onChange={v => onChange('sortingLayer', v)}
+            />
             <PropertyInput
-                label="Sort Order"
+                label="Order in Layer"
                 type="number"
-                value={data.sortingOrder}
-                onChange={v => onChange('sortingOrder', v)}
+                value={data.orderInLayer ?? 0}
+                onChange={v => onChange('orderInLayer', v)}
             />
         </div>
     );
@@ -1886,28 +1979,35 @@ function presetToAsset(preset: ParticlePreset): Partial<IParticleAsset> {
  * Particle editor panel component
  */
 export function ParticleEditorPanel() {
+    // 从 Store 获取所有状态和 actions | Get all state and actions from Store
     const {
         filePath,
         pendingFilePath,
         particleData,
         isDirty,
         isPlaying,
+        isLoading,
         selectedPreset,
-        setFilePath,
-        setPendingFilePath,
+        activeTab,
+        isFullscreen,
+        followMouse,
+        burstTrigger,
         setParticleData,
         updateProperty,
-        markSaved,
         setPlaying,
         setSelectedPreset,
         createNew,
+        setActiveTab,
+        toggleFullscreen,
+        toggleFollowMouse,
+        triggerBurst: storeTriggerBurst,
+        loadFile: storeLoadFile,
+        saveFile: storeSaveFile,
+        markSaved,
     } = useParticleEditorStore();
 
-    const [activeTab, setActiveTab] = useState<'basic' | 'emission' | 'particle' | 'color' | 'modules' | 'burst'>('basic');
-    const [isFullscreen, setIsFullscreen] = useState(false);
-    const [followMouse, setFollowMouse] = useState(false);
+    // mousePosition 保留为本地状态，因为更新频率极高 | Keep mousePosition as local state due to high update frequency
     const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-    const [triggerBurst, setTriggerBurst] = useState(0);
     const previewCanvasRef = useRef<HTMLCanvasElement>(null);
     const previewContainerRef = useRef<HTMLDivElement>(null);
 
@@ -1915,8 +2015,8 @@ export function ParticleEditorPanel() {
     const previewOptions = useMemo<PreviewOptions>(() => ({
         followMouse,
         mousePosition,
-        triggerBurst,
-    }), [followMouse, mousePosition, triggerBurst]);
+        triggerBurst: burstTrigger,
+    }), [followMouse, mousePosition, burstTrigger]);
 
     const { reset: resetPreview } = useParticlePreview(previewCanvasRef, particleData, isPlaying, previewOptions);
 
@@ -1933,84 +2033,60 @@ export function ParticleEditorPanel() {
         });
     }, [followMouse]);
 
-    // 切换全屏 | Toggle fullscreen
-    const toggleFullscreen = useCallback(() => {
-        setIsFullscreen(prev => !prev);
-    }, []);
-
-    // 触发一次爆发 | Trigger a burst
-    const handleTriggerBurst = useCallback(() => {
-        setTriggerBurst(prev => prev + 1);
-    }, []);
-
+    // 处理待打开文件 | Handle pending file - 使用 subscribeWithSelector 替代 useEffect
+    // Using store subscription instead of useEffect
     useEffect(() => {
         if (pendingFilePath) {
-            loadFile(pendingFilePath);
-            setPendingFilePath(null);
-        }
-    }, [pendingFilePath]);
-
-    const loadFile = useCallback(async (path: string) => {
-        try {
             const fileSystem = Core.services.tryResolve(IFileSystemService) as IFileSystem | null;
-            if (!fileSystem) {
-                console.error('[ParticleEditorPanel] FileSystem service not available');
-                return;
+            if (fileSystem) {
+                storeLoadFile(pendingFilePath, fileSystem);
             }
-
-            const content = await fileSystem.readFile(path);
-            const data = JSON.parse(content) as IParticleAsset;
-            const defaults = createDefaultParticleAsset();
-            setParticleData({ ...defaults, ...data });
-            setFilePath(path);
-        } catch (error) {
-            console.error('[ParticleEditorPanel] Failed to load file:', error);
         }
-    }, [setParticleData, setFilePath]);
+    }, [pendingFilePath, storeLoadFile]);
 
+    // 保存处理 | Save handler - 使用 Store action
     const handleSave = useCallback(async () => {
-        if (!particleData) return;
+        const fileSystem = Core.services.tryResolve(IFileSystemService) as IFileSystem | null;
+        if (!fileSystem) return;
 
-        let savePath = filePath;
+        const dialog = Core.services.tryResolve(IDialogService) as IDialog | null;
+        const success = await storeSaveFile(
+            fileSystem,
+            dialog ? { saveDialog: (opts) => dialog.saveDialog(opts) } : undefined
+        );
 
-        if (!savePath) {
-            const dialog = Core.services.tryResolve(IDialogService) as IDialog | null;
-            if (!dialog) return;
-
-            savePath = await dialog.saveDialog({
-                title: 'Save Particle Effect',
-                filters: [{ name: 'Particle Effect', extensions: ['particle'] }],
-                defaultPath: `${particleData.name || 'new-particle'}.particle`,
-            });
-
-            if (!savePath) return;
-        }
-
-        try {
-            const fileSystem = Core.services.tryResolve(IFileSystemService) as IFileSystem | null;
-            if (!fileSystem) return;
-
-            await fileSystem.writeFile(savePath, JSON.stringify(particleData, null, 2));
-            setFilePath(savePath);
-            markSaved();
-
+        if (success) {
             const messageHub = Core.services.tryResolve(MessageHub);
             if (messageHub) {
                 messageHub.publish('assets:refresh', {});
             }
-        } catch (error) {
-            console.error('[ParticleEditorPanel] Failed to save:', error);
         }
-    }, [particleData, filePath, setFilePath, markSaved]);
+    }, [storeSaveFile]);
 
     // 面板容器 ref | Panel container ref
     const panelRef = useRef<HTMLDivElement>(null);
+
+    // 自动获取焦点以接收键盘事件 | Auto focus to receive keyboard events
+    useEffect(() => {
+        // 延迟获取焦点，确保面板已挂载 | Delay focus to ensure panel is mounted
+        const timer = setTimeout(() => {
+            panelRef.current?.focus();
+        }, 100);
+        return () => clearTimeout(timer);
+    }, []);
+
+    // 点击面板时获取焦点 | Focus on panel click
+    const handlePanelClick = useCallback(() => {
+        panelRef.current?.focus();
+    }, []);
 
     // 键盘快捷键处理 | Keyboard shortcut handler
     const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
         if ((e.ctrlKey || e.metaKey) && e.key === 's') {
             e.preventDefault();
             e.stopPropagation();
+            // 阻止原生事件传播到全局处理器 | Stop native event from reaching global handler
+            e.nativeEvent.stopImmediatePropagation();
             handleSave();
         }
     }, [handleSave]);
@@ -2025,9 +2101,12 @@ export function ParticleEditorPanel() {
         });
 
         if (path && typeof path === 'string') {
-            await loadFile(path);
+            const fileSystem = Core.services.tryResolve(IFileSystemService) as IFileSystem | null;
+            if (fileSystem) {
+                await storeLoadFile(path, fileSystem);
+            }
         }
-    }, [loadFile]);
+    }, [storeLoadFile]);
 
     const handleBrowseTexture = useCallback(async (): Promise<string | null> => {
         const dialog = Core.services.tryResolve(IDialogService) as IDialog | null;
@@ -2039,12 +2118,40 @@ export function ParticleEditorPanel() {
         });
 
         if (path && typeof path === 'string') {
-            return path;
+            // 将路径转换为 GUID | Convert path to GUID
+            const assetRegistry = Core.services.tryResolve(AssetRegistryService) as AssetRegistryService | null;
+            if (assetRegistry) {
+                const relativePath = assetRegistry.absoluteToRelative(path);
+                if (relativePath) {
+                    const guid = assetRegistry.getGuidByPath(relativePath);
+                    if (guid) {
+                        // 设置 textureGuid | Set textureGuid
+                        updateProperty('textureGuid', guid);
+                        return guid;
+                    }
+                }
+            }
+            // 如果无法获取 GUID，返回 null | Return null if cannot get GUID
+            console.warn('[ParticleEditor] Failed to get GUID for texture path:', path);
+            return null;
         }
         return null;
+    }, [updateProperty]);
+
+    // 通过 GUID 获取资产显示名称 | Get asset display name by GUID
+    const resolveGuidToName = useCallback((guid: string): string | null => {
+        const assetRegistry = Core.services.tryResolve(AssetRegistryService) as AssetRegistryService | null;
+        if (!assetRegistry) return null;
+
+        const metadata = assetRegistry.getAsset(guid);
+        if (metadata) {
+            return metadata.name;
+        }
+        // 如果找不到，返回 GUID 前8位 | If not found, return first 8 chars of GUID
+        return guid.substring(0, 8) + '...';
     }, []);
 
-    const handleApplyPreset = useCallback((presetName: string) => {
+    const handleApplyPreset = useCallback(async (presetName: string) => {
         const preset = getPresetByName(presetName);
         if (!preset || !particleData) return;
 
@@ -2071,7 +2178,28 @@ export function ParticleEditorPanel() {
 
         // 重置预览 | Reset preview
         resetPreview();
-    }, [particleData, setParticleData, setSelectedPreset, resetPreview]);
+
+        // 自动保存（如果已有文件路径）| Auto-save if file path exists
+        if (filePath) {
+            const fileSystem = Core.services.tryResolve(IFileSystemService) as IFileSystem | null;
+            if (fileSystem) {
+                const newData = { ...particleData, ...assetData };
+                if (preset.emissionRate === 0) {
+                    (newData as any).bursts = (assetData as any).bursts;
+                }
+                try {
+                    await fileSystem.writeFile(filePath, JSON.stringify(newData, null, 2));
+                    // 标记为已保存 | Mark as saved
+                    markSaved();
+                    // 通知资产刷新 | Notify asset refresh
+                    const messageHub = Core.services.tryResolve(MessageHub);
+                    messageHub?.publish('assets:refresh', {});
+                } catch (error) {
+                    console.error('[ParticleEditor] Auto-save failed:', error);
+                }
+            }
+        }
+    }, [particleData, filePath, setParticleData, setSelectedPreset, resetPreview, markSaved]);
 
     const handleNew = useCallback(() => {
         createNew();
@@ -2146,7 +2274,8 @@ export function ParticleEditorPanel() {
             ref={panelRef}
             className="particle-editor-panel"
             tabIndex={0}
-            onKeyDown={handleKeyDown}
+            onKeyDownCapture={handleKeyDown}
+            onClick={handlePanelClick}
         >
             {/* Toolbar */}
             <div className="particle-editor-toolbar">
@@ -2186,7 +2315,7 @@ export function ParticleEditorPanel() {
                     <div className="preview-controls">
                         <button
                             className="preview-control-btn burst-btn"
-                            onClick={handleTriggerBurst}
+                            onClick={storeTriggerBurst}
                             title="Trigger Burst (Click canvas also works)"
                         >
                             <Zap size={14} />
@@ -2195,7 +2324,7 @@ export function ParticleEditorPanel() {
                         <div className="preview-control-separator" />
                         <button
                             className={`preview-control-btn ${followMouse ? 'active' : ''}`}
-                            onClick={() => setFollowMouse(!followMouse)}
+                            onClick={toggleFollowMouse}
                             title="Mouse Follow Mode"
                         >
                             <MousePointer2 size={14} />
@@ -2232,7 +2361,7 @@ export function ParticleEditorPanel() {
                                 });
                             }
                             // 触发爆发 | Trigger burst
-                            handleTriggerBurst();
+                            storeTriggerBurst();
                         }}
                     />
                 </div>
@@ -2303,6 +2432,7 @@ export function ParticleEditorPanel() {
                                 data={particleData}
                                 onChange={updateProperty}
                                 onBrowseTexture={handleBrowseTexture}
+                                resolveGuidToName={resolveGuidToName}
                             />
                         )}
                         {activeTab === 'emission' && (

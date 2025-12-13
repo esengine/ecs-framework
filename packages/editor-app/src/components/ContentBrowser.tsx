@@ -3,7 +3,7 @@
  * 用于浏览和管理项目资产
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import * as LucideIcons from 'lucide-react';
 import { useLocale } from '../hooks/useLocale';
 import {
@@ -38,10 +38,13 @@ import {
     RefreshCw,
     Settings,
     Database,
-    AlertTriangle
+    AlertTriangle,
+    X,
+    FolderPlus,
+    Inbox
 } from 'lucide-react';
-import { Core } from '@esengine/ecs-framework';
-import { MessageHub, FileActionRegistry, AssetRegistryService, MANAGED_ASSET_DIRECTORIES, type FileCreationTemplate } from '@esengine/editor-core';
+import { Core, Entity, HierarchySystem, PrefabSerializer } from '@esengine/ecs-framework';
+import { MessageHub, FileActionRegistry, AssetRegistryService, MANAGED_ASSET_DIRECTORIES, type FileCreationTemplate, EntityStoreService, SceneManagerService } from '@esengine/editor-core';
 import { TauriAPI, DirectoryEntry } from '../api/tauri';
 import { SettingsService } from '../services/SettingsService';
 import { ContextMenu, ContextMenuItem } from './ContextMenu';
@@ -126,6 +129,32 @@ function isRootManagedDirectory(folderPath: string, projectPath: string | null):
     return false;
 }
 
+/**
+ * 高亮搜索文本
+ * Highlight search text in a string
+ */
+function highlightSearchText(text: string, query: string): React.ReactNode {
+    if (!query.trim()) return text;
+
+    const lowerText = text.toLowerCase();
+    const lowerQuery = query.toLowerCase();
+    const index = lowerText.indexOf(lowerQuery);
+
+    if (index === -1) return text;
+
+    const before = text.substring(0, index);
+    const match = text.substring(index, index + query.length);
+    const after = text.substring(index + query.length);
+
+    return (
+        <>
+            {before}
+            <span className="search-highlight">{match}</span>
+            {after}
+        </>
+    );
+}
+
 // 获取资产类型显示名称
 function getAssetTypeName(asset: AssetItem): string {
     if (asset.type === 'folder') return 'Folder';
@@ -178,6 +207,10 @@ export function ContentBrowser({
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(false);
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+    // 隐藏的文件扩展名（默认隐藏 .meta）| Hidden file extensions (hide .meta by default)
+    const [hiddenExtensions, setHiddenExtensions] = useState<Set<string>>(new Set(['meta']));
+    const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
     // Folder tree state
     const [folderTree, setFolderTree] = useState<FolderNode | null>(null);
@@ -474,11 +507,33 @@ export class ${className} {
                     setDeleteConfirmDialog(asset);
                 }
             }
+
+            // Ctrl+A - 全选 | Select all
+            if (e.key === 'a' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                // 计算当前过滤后的资产 | Calculate currently filtered assets
+                const currentFiltered = searchQuery.trim()
+                    ? assets.filter(a => a.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                    : assets;
+                const allPaths = new Set(currentFiltered.map(a => a.path));
+                setSelectedPaths(allPaths);
+                const lastItem = currentFiltered[currentFiltered.length - 1];
+                if (lastItem) {
+                    setLastSelectedPath(lastItem.path);
+                }
+            }
+
+            // Escape - 取消选择 | Deselect all
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                setSelectedPaths(new Set());
+                setLastSelectedPath(null);
+            }
         };
 
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [selectedPaths, assets, renameDialog, deleteConfirmDialog, createFileDialog]);
+    }, [selectedPaths, assets, searchQuery, renameDialog, deleteConfirmDialog, createFileDialog]);
 
     const getTemplateLabel = (label: string): string => {
         // Map template labels to translation keys
@@ -582,6 +637,21 @@ export class ${className} {
         }
     }, [currentPath, projectPath, loadAssets, buildFolderTree]);
 
+    // 点击外部关闭过滤器下拉菜单 | Close filter dropdown when clicking outside
+    useEffect(() => {
+        if (!showFilterDropdown) return;
+
+        const handleClickOutside = (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
+            if (!target.closest('.cb-filter-wrapper')) {
+                setShowFilterDropdown(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showFilterDropdown]);
+
     // Initialize on mount
     useEffect(() => {
         if (projectPath) {
@@ -617,6 +687,44 @@ export class ${className} {
             buildFolderTree(projectPath).then(setFolderTree);
         }
     }, [expandedFolders, projectPath, buildFolderTree]);
+
+    // Subscribe to asset change events to refresh content
+    // 订阅资产变化事件以刷新内容
+    useEffect(() => {
+        if (!messageHub) return;
+
+        const handleAssetChange = (data: { type: string; path: string; relativePath: string; guid: string }) => {
+            // Check if the changed file is in the current directory
+            // 检查变化的文件是否在当前目录中
+            if (!currentPath || !data.path) return;
+
+            const normalizedPath = data.path.replace(/\\/g, '/');
+            const normalizedCurrentPath = currentPath.replace(/\\/g, '/');
+            const parentDir = normalizedPath.substring(0, normalizedPath.lastIndexOf('/'));
+
+            if (parentDir === normalizedCurrentPath) {
+                // Refresh current directory
+                // 刷新当前目录
+                loadAssets(currentPath);
+            }
+        };
+
+        const handleAssetsRefresh = () => {
+            // Refresh current directory when generic refresh is requested
+            // 当请求通用刷新时刷新当前目录
+            if (currentPath) {
+                loadAssets(currentPath);
+            }
+        };
+
+        const unsubChange = messageHub.subscribe('assets:changed', handleAssetChange);
+        const unsubRefresh = messageHub.subscribe('assets:refresh', handleAssetsRefresh);
+
+        return () => {
+            unsubChange();
+            unsubRefresh();
+        };
+    }, [messageHub, currentPath, loadAssets]);
 
     // Handle reveal path - navigate to folder and select file
     const prevRevealPath = useRef<string | null>(null);
@@ -788,7 +896,13 @@ export class ${className} {
     const handleFolderDragOver = useCallback((e: React.DragEvent, folderPath: string) => {
         e.preventDefault();
         e.stopPropagation();
-        setDragOverFolder(folderPath);
+        // 支持资产拖放和实体拖放 | Support asset drag and entity drag
+        const hasAsset = e.dataTransfer.types.includes('asset-path');
+        const hasEntity = e.dataTransfer.types.includes('entity-id');
+        if (hasAsset || hasEntity) {
+            e.dataTransfer.dropEffect = hasEntity ? 'copy' : 'move';
+            setDragOverFolder(folderPath);
+        }
     }, []);
 
     const handleFolderDragLeave = useCallback((e: React.DragEvent) => {
@@ -802,11 +916,75 @@ export class ${className} {
         e.stopPropagation();
         setDragOverFolder(null);
 
+        // 检查是否是资产移动 | Check if it's asset move
         const sourcePath = e.dataTransfer.getData('asset-path');
         if (sourcePath) {
             await handleMoveAsset(sourcePath, targetFolderPath);
+            return;
         }
-    }, [handleMoveAsset]);
+
+        // 检查是否是实体拖放（创建预制体）| Check if it's entity drop (create prefab)
+        const entityIdStr = e.dataTransfer.getData('entity-id');
+        if (entityIdStr) {
+            const entityId = parseInt(entityIdStr, 10);
+            if (isNaN(entityId)) return;
+
+            const scene = Core.scene;
+            if (!scene) return;
+
+            const entity = scene.findEntityById(entityId);
+            if (!entity) return;
+
+            // 获取层级系统 | Get hierarchy system
+            const hierarchySystem = scene.getSystem(HierarchySystem);
+
+            // 创建预制体数据 | Create prefab data
+            const prefabData = PrefabSerializer.createPrefab(
+                entity,
+                {
+                    name: entity.name,
+                    includeChildren: true
+                },
+                hierarchySystem ?? undefined
+            );
+
+            // 序列化为 JSON | Serialize to JSON
+            const prefabJson = PrefabSerializer.serialize(prefabData, true);
+
+            // 保存到目标文件夹 | Save to target folder
+            const sep = targetFolderPath.includes('\\') ? '\\' : '/';
+            const filePath = `${targetFolderPath}${sep}${entity.name}.prefab`;
+
+            try {
+                await TauriAPI.writeFileContent(filePath, prefabJson);
+                console.log(`[ContentBrowser] Prefab created: ${filePath}`);
+
+                // 注册资产以生成 .meta 文件 | Register asset to generate .meta file
+                const assetRegistry = Core.services.tryResolve(AssetRegistryService) as AssetRegistryService | null;
+                let guid: string | null = null;
+                if (assetRegistry) {
+                    guid = await assetRegistry.registerAsset(filePath);
+                    console.log(`[ContentBrowser] Registered prefab asset with GUID: ${guid}`);
+                }
+
+                // 刷新目录 | Refresh directory
+                if (currentPath === targetFolderPath) {
+                    await loadAssets(targetFolderPath);
+                }
+
+                // 发布事件 | Publish event
+                messageHub.publish('prefab:created', {
+                    path: filePath,
+                    guid,
+                    name: entity.name,
+                    sourceEntityId: entity.id,
+                    sourceEntityName: entity.name
+                });
+            } catch (error) {
+                console.error('[ContentBrowser] Failed to create prefab:', error);
+            }
+        }
+    }, [handleMoveAsset, currentPath, loadAssets, messageHub]);
 
     // Handle asset click
     const handleAssetClick = useCallback((asset: AssetItem, e: React.MouseEvent) => {
@@ -856,6 +1034,22 @@ export class ${className} {
             const ext = asset.extension?.toLowerCase();
             if (ext === 'ecs' && onOpenScene) {
                 onOpenScene(asset.path);
+                return;
+            }
+
+            // 预制体文件进入预制体编辑模式
+            // Open prefab file in prefab edit mode
+            if (ext === 'prefab') {
+                try {
+                    const sceneManager = Core.services.tryResolve(SceneManagerService);
+                    if (sceneManager) {
+                        await sceneManager.enterPrefabEditMode(asset.path);
+                    } else {
+                        console.error('SceneManagerService not available');
+                    }
+                } catch (error) {
+                    console.error('Failed to open prefab:', error);
+                }
                 return;
             }
 
@@ -1092,9 +1286,10 @@ export class ${className} {
                 onClick: async () => {
                     if (currentPath) {
                         try {
+                            console.log('[ContentBrowser] showInFolder (empty area) - currentPath:', currentPath);
                             await TauriAPI.showInFolder(currentPath);
                         } catch (error) {
-                            console.error('Failed to show in folder:', error);
+                            console.error('Failed to show in folder:', error, 'Path:', currentPath);
                         }
                     }
                     setContextMenu(null);
@@ -1301,8 +1496,17 @@ export class ${className} {
             icon: <ExternalLink size={16} />,
             onClick: async () => {
                 try {
-                    console.log('[ContentBrowser] showInFolder path:', asset.path);
-                    await TauriAPI.showInFolder(asset.path);
+                    // Ensure we use absolute path
+                    // 确保使用绝对路径
+                    const absolutePath = asset.path.includes(':') || asset.path.startsWith('\\\\')
+                        ? asset.path
+                        : (projectPath ? `${projectPath}/${asset.path}`.replace(/\//g, '\\') : asset.path);
+
+                    console.log('[ContentBrowser] showInFolder - asset.path:', asset.path);
+                    console.log('[ContentBrowser] showInFolder - projectPath:', projectPath);
+                    console.log('[ContentBrowser] showInFolder - absolutePath:', absolutePath);
+
+                    await TauriAPI.showInFolder(absolutePath);
                 } catch (error) {
                     console.error('Failed to show in folder:', error, 'Path:', asset.path);
                 }
@@ -1405,9 +1609,10 @@ export class ${className} {
             icon: <ExternalLink size={16} />,
             onClick: async () => {
                 try {
+                    console.log('[ContentBrowser] showInFolder (folder tree) - node.path:', node.path);
                     await TauriAPI.showInFolder(node.path);
                 } catch (error) {
-                    console.error('Failed to show in explorer:', error);
+                    console.error('Failed to show in explorer:', error, 'Path:', node.path);
                 }
             }
         });
@@ -1466,10 +1671,51 @@ export class ${className} {
         );
     }, [currentPath, expandedFolders, handleFolderSelect, handleFolderTreeContextMenu, toggleFolderExpand, projectPath, t, dragOverFolder, handleFolderDragOver, handleFolderDragLeave, handleFolderDrop]);
 
-    // Filter assets by search
-    const filteredAssets = searchQuery.trim()
-        ? assets.filter(a => a.name.toLowerCase().includes(searchQuery.toLowerCase()))
-        : assets;
+    // 收集当前目录所有唯一扩展名 | Collect all unique extensions in current directory
+    const allExtensions = useMemo(() => {
+        const exts = new Set<string>();
+        assets.forEach(a => {
+            if (a.extension) {
+                exts.add(a.extension.toLowerCase());
+            }
+        });
+        return Array.from(exts).sort();
+    }, [assets]);
+
+    // 切换扩展名隐藏状态 | Toggle extension hidden state
+    const toggleExtensionHidden = useCallback((ext: string) => {
+        setHiddenExtensions(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(ext)) {
+                newSet.delete(ext);
+            } else {
+                newSet.add(ext);
+            }
+            return newSet;
+        });
+    }, []);
+
+    // Filter assets by search and hidden extensions
+    // 按搜索词和隐藏扩展名过滤资产
+    const filteredAssets = useMemo(() => {
+        let result = assets;
+
+        // 过滤隐藏的扩展名 | Filter hidden extensions
+        if (hiddenExtensions.size > 0) {
+            result = result.filter(a => {
+                if (a.type === 'folder') return true;
+                const ext = a.extension?.toLowerCase();
+                return !ext || !hiddenExtensions.has(ext);
+            });
+        }
+
+        // 搜索过滤 | Search filter
+        if (searchQuery.trim()) {
+            result = result.filter(a => a.name.toLowerCase().includes(searchQuery.toLowerCase()));
+        }
+
+        return result;
+    }, [assets, hiddenExtensions, searchQuery]);
 
     const breadcrumbs = getBreadcrumbs();
 
@@ -1601,10 +1847,55 @@ export class ${className} {
 
                 {/* Search Bar */}
                 <div className="cb-search-bar">
-                    <button className="cb-filter-btn">
-                        <SlidersHorizontal size={14} />
-                        <ChevronDown size={10} />
-                    </button>
+                    <div className="cb-filter-wrapper">
+                        <button
+                            className={`cb-filter-btn ${hiddenExtensions.size > 0 ? 'has-filter' : ''}`}
+                            onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                            title={hiddenExtensions.size > 0 ? `${hiddenExtensions.size} hidden` : 'Filter'}
+                        >
+                            <SlidersHorizontal size={14} />
+                            <ChevronDown size={10} />
+                            {hiddenExtensions.size > 0 && (
+                                <span className="cb-filter-badge">{hiddenExtensions.size}</span>
+                            )}
+                        </button>
+                        {showFilterDropdown && (
+                            <div className="cb-filter-dropdown">
+                                <div className="cb-filter-header">
+                                    <span>{t('contentBrowser.hiddenExtensions') || 'Hidden Extensions'}</span>
+                                    {hiddenExtensions.size > 0 && (
+                                        <button
+                                            className="cb-filter-clear"
+                                            onClick={() => setHiddenExtensions(new Set())}
+                                        >
+                                            {t('common.clearAll') || 'Clear All'}
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="cb-filter-list">
+                                    {allExtensions.length === 0 ? (
+                                        <div className="cb-filter-empty">
+                                            {t('contentBrowser.noExtensions') || 'No file types'}
+                                        </div>
+                                    ) : (
+                                        allExtensions.map(ext => (
+                                            <label key={ext} className="cb-filter-item">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={hiddenExtensions.has(ext)}
+                                                    onChange={() => toggleExtensionHidden(ext)}
+                                                />
+                                                <span className="cb-filter-ext">.{ext}</span>
+                                                <span className="cb-filter-count">
+                                                    ({assets.filter(a => a.extension?.toLowerCase() === ext).length})
+                                                </span>
+                                            </label>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                     <div className="cb-search-input-wrapper">
                         <Search size={14} className="cb-search-icon" />
                         <input
@@ -1613,7 +1904,23 @@ export class ${className} {
                             placeholder={`${t('contentBrowser.search')} ${breadcrumbs[breadcrumbs.length - 1]?.name || ''}`}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Escape' && searchQuery) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setSearchQuery('');
+                                }
+                            }}
                         />
+                        {searchQuery && (
+                            <button
+                                className="cb-search-clear"
+                                onClick={() => setSearchQuery('')}
+                                title={t('common.clear') || 'Clear'}
+                            >
+                                <X size={12} />
+                            </button>
+                        )}
                     </div>
                     <div className="cb-view-options">
                         <button
@@ -1635,11 +1942,52 @@ export class ${className} {
                 <div
                     className={`cb-asset-grid ${viewMode}`}
                     onContextMenu={(e) => handleContextMenu(e)}
+                    onDragOver={(e) => {
+                        // 允许实体拖放到当前目录 | Allow entity drop to current directory
+                        if (e.dataTransfer.types.includes('entity-id') && currentPath) {
+                            e.preventDefault();
+                            e.dataTransfer.dropEffect = 'copy';
+                        }
+                    }}
+                    onDrop={(e) => {
+                        // 在当前目录创建预制体 | Create prefab in current directory
+                        if (currentPath && e.dataTransfer.types.includes('entity-id')) {
+                            handleFolderDrop(e, currentPath);
+                        }
+                    }}
                 >
                     {loading ? (
-                        <div className="cb-loading">Loading...</div>
+                        <div className="cb-loading">
+                            <div className="cb-loading-spinner" />
+                            <span>{t('contentBrowser.loading') || 'Loading...'}</span>
+                        </div>
                     ) : filteredAssets.length === 0 ? (
-                        <div className="cb-empty">{t('contentBrowser.empty')}</div>
+                        <div className="cb-empty">
+                            <Inbox size={48} className="cb-empty-icon" />
+                            <span className="cb-empty-title">
+                                {searchQuery.trim()
+                                    ? t('contentBrowser.noSearchResults')
+                                    : t('contentBrowser.empty')}
+                            </span>
+                            <span className="cb-empty-hint">
+                                {searchQuery.trim()
+                                    ? t('contentBrowser.noSearchResultsHint')
+                                    : t('contentBrowser.emptyHint')}
+                            </span>
+                            {!searchQuery.trim() && (
+                                <button
+                                    className="cb-empty-action"
+                                    onClick={() => setContextMenu({
+                                        position: { x: window.innerWidth / 2, y: window.innerHeight / 2 },
+                                        asset: null,
+                                        isBackground: true
+                                    })}
+                                >
+                                    <Plus size={12} style={{ marginRight: 4 }} />
+                                    {t('contentBrowser.createNew') || 'Create New'}
+                                </button>
+                            )}
+                        </div>
                     ) : (
                         filteredAssets.map(asset => {
                             const isDragOverAsset = asset.type === 'folder' && dragOverFolder === asset.path;
@@ -1692,7 +2040,7 @@ export class ${className} {
                                     </div>
                                     <div className="cb-asset-info">
                                         <div className="cb-asset-name" title={asset.name}>
-                                            {asset.name}
+                                            {highlightSearchText(asset.name, searchQuery)}
                                         </div>
                                         <div className="cb-asset-type">
                                             {getAssetTypeName(asset)}
@@ -1706,7 +2054,23 @@ export class ${className} {
 
                 {/* Status Bar */}
                 <div className="cb-status-bar">
-                    <span>{filteredAssets.length} {t('contentBrowser.items')}</span>
+                    <span>
+                        {searchQuery.trim() ? (
+                            // 搜索模式：显示找到的结果数 | Search mode: show found results
+                            t('contentBrowser.searchResults', {
+                                found: filteredAssets.length,
+                                total: assets.length
+                            })
+                        ) : (
+                            // 正常模式 | Normal mode
+                            `${filteredAssets.length} ${t('contentBrowser.items')}`
+                        )}
+                    </span>
+                    {selectedPaths.size > 1 && (
+                        <span className="cb-status-selected">
+                            {t('contentBrowser.selectedCount', { count: selectedPaths.size })}
+                        </span>
+                    )}
                 </div>
             </div>
 
@@ -1730,8 +2094,8 @@ export class ${className} {
 
             {/* Rename Dialog */}
             {renameDialog && (
-                <div className="cb-dialog-overlay" onClick={() => setRenameDialog(null)}>
-                    <div className="cb-dialog" onClick={(e) => e.stopPropagation()}>
+                <div className="cb-dialog-overlay">
+                    <div className="cb-dialog">
                         <div className="cb-dialog-header">
                             <h3>{t('contentBrowser.dialogs.renameTitle')}</h3>
                         </div>
@@ -1764,8 +2128,8 @@ export class ${className} {
 
             {/* Delete Confirm Dialog */}
             {deleteConfirmDialog && (
-                <div className="cb-dialog-overlay" onClick={() => setDeleteConfirmDialog(null)}>
-                    <div className="cb-dialog" onClick={(e) => e.stopPropagation()}>
+                <div className="cb-dialog-overlay">
+                    <div className="cb-dialog">
                         <div className="cb-dialog-header">
                             <h3>{t('contentBrowser.deleteConfirmTitle')}</h3>
                         </div>

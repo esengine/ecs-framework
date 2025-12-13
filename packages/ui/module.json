@@ -1,6 +1,7 @@
 {
   "id": "ui",
   "name": "@esengine/ui",
+  "globalKey": "ui",
   "displayName": "UI System",
   "description": "User interface components and layout | 用户界面组件和布局",
   "version": "1.0.0",
@@ -14,6 +15,7 @@
   "isCore": false,
   "defaultEnabled": false,
   "isEngineModule": true,
+  "hasRuntime": true,
   "canContainContent": true,
   "platforms": [
     "web",
@@ -22,7 +24,8 @@
   ],
   "dependencies": [
     "core",
-    "math"
+    "math",
+    "engine-core"
   ],
   "exports": {
     "components": [

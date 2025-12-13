@@ -4,8 +4,8 @@
  */
 
 import { Property, Serialize, Serializable, ECSComponent } from '@esengine/ecs-framework';
+import type { IVector2 } from '@esengine/ecs-framework-math';
 import { Collider2DBase } from './Collider2DBase';
-import type { Vector2 } from '../types/Physics2DTypes';
 
 /**
  * 胶囊方向
@@ -112,7 +112,7 @@ export class CapsuleCollider2DComponent extends Collider2DBase {
         return rectArea + circleArea;
     }
 
-    public override calculateAABB(): { min: Vector2; max: Vector2 } {
+    public override calculateAABB(): { min: IVector2; max: IVector2 } {
         if (this.direction === CapsuleDirection2D.Vertical) {
             return {
                 min: { x: this.offset.x - this.radius, y: this.offset.y - this.height / 2 },

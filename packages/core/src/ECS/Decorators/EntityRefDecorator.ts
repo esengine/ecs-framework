@@ -145,3 +145,36 @@ export function getEntityRefMetadata(component: any): EntityRefMetadata | null {
 export function hasEntityRef(component: any): boolean {
     return getEntityRefMetadata(component) !== null;
 }
+
+/**
+ * 检查特定属性是否为EntityRef
+ *
+ * Check if a specific property is an EntityRef.
+ *
+ * @param component Component实例或Component类
+ * @param propertyKey 属性名
+ * @returns 如果是EntityRef属性返回true
+ */
+export function isEntityRefProperty(component: any, propertyKey: string): boolean {
+    const metadata = getEntityRefMetadata(component);
+    if (!metadata) {
+        return false;
+    }
+    return metadata.properties.has(propertyKey);
+}
+
+/**
+ * 获取组件的所有EntityRef属性名
+ *
+ * Get all EntityRef property names of a component.
+ *
+ * @param component Component实例或Component类
+ * @returns EntityRef属性名数组
+ */
+export function getEntityRefProperties(component: any): string[] {
+    const metadata = getEntityRefMetadata(component);
+    if (!metadata) {
+        return [];
+    }
+    return Array.from(metadata.properties);
+}

@@ -363,6 +363,25 @@ impl Engine {
         self.texture_manager.get_or_load_by_path(path)
     }
 
+    /// Clear the texture path cache.
+    /// 清除纹理路径缓存。
+    ///
+    /// This should be called when restoring scene snapshots to ensure
+    /// textures are reloaded with correct IDs.
+    /// 在恢复场景快照时应调用此方法，以确保纹理使用正确的ID重新加载。
+    pub fn clear_texture_path_cache(&mut self) {
+        self.texture_manager.clear_path_cache();
+    }
+
+    /// Clear all textures and reset state.
+    /// 清除所有纹理并重置状态。
+    ///
+    /// This removes all loaded textures from GPU memory and resets the ID counter.
+    /// 这会从GPU内存中移除所有已加载的纹理并重置ID计数器。
+    pub fn clear_all_textures(&mut self) {
+        self.texture_manager.clear_all();
+    }
+
     /// Check if a key is currently pressed.
     /// 检查某个键是否当前被按下。
     pub fn is_key_down(&self, key_code: &str) -> bool {
@@ -403,6 +422,36 @@ impl Engine {
     pub fn get_camera(&self) -> (f32, f32, f32, f32) {
         let camera = self.renderer.camera();
         (camera.position.x, camera.position.y, camera.zoom, camera.rotation)
+    }
+
+    /// Convert screen coordinates to world coordinates.
+    /// 将屏幕坐标转换为世界坐标。
+    ///
+    /// # Arguments | 参数
+    /// * `screen_x` - Screen X coordinate (0 = left edge of canvas)
+    /// * `screen_y` - Screen Y coordinate (0 = top edge of canvas)
+    ///
+    /// # Returns | 返回
+    /// Tuple of (world_x, world_y)
+    pub fn screen_to_world(&self, screen_x: f32, screen_y: f32) -> (f32, f32) {
+        let camera = self.renderer.camera();
+        let world = camera.screen_to_world(crate::math::Vec2::new(screen_x, screen_y));
+        (world.x, world.y)
+    }
+
+    /// Convert world coordinates to screen coordinates.
+    /// 将世界坐标转换为屏幕坐标。
+    ///
+    /// # Arguments | 参数
+    /// * `world_x` - World X coordinate
+    /// * `world_y` - World Y coordinate
+    ///
+    /// # Returns | 返回
+    /// Tuple of (screen_x, screen_y)
+    pub fn world_to_screen(&self, world_x: f32, world_y: f32) -> (f32, f32) {
+        let camera = self.renderer.camera();
+        let screen = camera.world_to_screen(crate::math::Vec2::new(world_x, world_y));
+        (screen.x, screen.y)
     }
 
     /// Set grid visibility.

@@ -6,7 +6,7 @@
 
 import type { IScene, ServiceContainer } from '@esengine/ecs-framework';
 import { ComponentRegistry } from '@esengine/ecs-framework';
-import type { IRuntimeModule, IPlugin, ModuleManifest, SystemContext } from '@esengine/engine-core';
+import type { IRuntimeModule, IRuntimePlugin, ModuleManifest, SystemContext } from '@esengine/engine-core';
 import { WasmLibraryLoaderFactory } from '@esengine/platform-common';
 import type * as RAPIER from '@esengine/rapier2d';
 
@@ -199,7 +199,7 @@ const manifest: ModuleManifest = {
 /**
  * 物理插件
  */
-export const PhysicsPlugin: IPlugin = {
+export const PhysicsPlugin: IRuntimePlugin = {
     manifest,
     runtimeModule: new PhysicsRuntimeModule()
 };

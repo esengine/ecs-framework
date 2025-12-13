@@ -40,6 +40,8 @@ export interface ModuleManifest {
     wasmPaths?: string[];
     runtimeWasmPath?: string;
     externalDependencies?: string[];
+    /** Global key for window.__ESENGINE__ (optional, defaults to camelCase of id) */
+    globalKey?: string;
 }
 
 export class RuntimeResolver {
@@ -263,6 +265,7 @@ export class RuntimeResolver {
         const copiedModules: string[] = [];
 
         // Copy each module's dist files
+        const missingModules: string[] = [];
         for (const module of modules) {
             const moduleDistDir = `${this.engineModulesPath}\\${module.id}\\dist`;
             const moduleSrcFile = `${moduleDistDir}\\index.mjs`;
@@ -294,7 +297,16 @@ export class RuntimeResolver {
                 }
 
                 copiedModules.push(module.id);
+                console.log(`[RuntimeResolver] Copied module: ${module.id} (${module.name})`);
+            } else {
+                missingModules.push(module.id);
+                console.warn(`[RuntimeResolver] MISSING dist for module: ${module.id} (looked in ${moduleDistDir})`);
             }
+        }
+
+        if (missingModules.length > 0) {
+            console.error(`[RuntimeResolver] ${missingModules.length} modules have missing dist files:`, missingModules);
+            console.error('[RuntimeResolver] Please run: npm run build in the workspace to build all modules');
         }
 
         // Copy external dependencies (e.g., rapier2d)

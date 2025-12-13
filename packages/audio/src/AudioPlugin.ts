@@ -1,5 +1,5 @@
 import type { ComponentRegistry as ComponentRegistryType } from '@esengine/ecs-framework';
-import type { IRuntimeModule, IPlugin, ModuleManifest } from '@esengine/engine-core';
+import type { IRuntimeModule, IRuntimePlugin, ModuleManifest } from '@esengine/engine-core';
 import { AudioSourceComponent } from './AudioSourceComponent';
 
 class AudioRuntimeModule implements IRuntimeModule {
@@ -22,7 +22,7 @@ const manifest: ModuleManifest = {
     exports: { components: ['AudioSourceComponent'] }
 };
 
-export const AudioPlugin: IPlugin = {
+export const AudioPlugin: IRuntimePlugin = {
     manifest,
     runtimeModule: new AudioRuntimeModule()
 };

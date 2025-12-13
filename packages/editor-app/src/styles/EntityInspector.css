@@ -104,6 +104,31 @@
   color: #555;
 }
 
+.inspector-search-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  background: transparent;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all 0.15s ease;
+}
+
+.inspector-search-clear:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.inspector-search-count {
+  font-size: 10px;
+  color: #666;
+  white-space: nowrap;
+  padding: 0 4px;
+}
+
 /* Category Tabs */
 .inspector-category-tabs {
   display: flex;
@@ -430,7 +455,7 @@
 .property-field {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   padding: 4px 8px;
   font-size: 11px;
   gap: 8px;
@@ -438,6 +463,11 @@
   border-radius: 0;
   margin-bottom: 1px;
   min-height: 24px;
+}
+
+/* 简单字段（文本、数字等）垂直居中 | Simple fields (text, number, etc.) center vertically */
+.property-field.simple-field {
+  align-items: center;
 }
 
 .property-field:last-child {
@@ -454,6 +484,12 @@
   flex-shrink: 0;
   min-width: 70px;
   font-size: 11px;
+  padding-top: 3px;
+}
+
+/* 简单字段的 label 不需要额外的 padding | Simple field labels don't need extra padding */
+.property-field.simple-field .property-label {
+  padding-top: 0;
 }
 
 .property-value-text {
@@ -778,6 +814,15 @@
   background: var(--color-primary);
 }
 
+.component-dropdown-item.selected {
+  background: var(--color-bg-active, #3b82f6);
+  color: #fff;
+}
+
+.component-dropdown-item.selected svg {
+  color: rgba(255, 255, 255, 0.8);
+}
+
 .component-dropdown-item-name {
   font-size: 12px;
   font-weight: 500;
@@ -880,13 +925,28 @@
 /* Property rows inside component */
 .component-item-content .property-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   min-height: 22px;
   padding: 2px 0;
 }
 
+/* 简单字段垂直居中 | Simple fields center vertically */
+.component-item-content .property-row.simple-field {
+  align-items: center;
+}
+
 .component-item-content .property-row:hover {
   background: rgba(255, 255, 255, 0.02);
+}
+
+/* 资源字段行需要更多高度 | Asset field rows need more height */
+.component-item-content .property-field-asset {
+  min-height: 52px !important;
+  align-items: flex-start !important;
+}
+
+.component-item-content .property-field-asset > .property-label {
+  padding-top: 14px;
 }
 
 /* Code Preview */
@@ -1201,4 +1261,183 @@
   background: #3b82f6;
   border-color: #3b82f6;
   color: #fff;
+}
+
+/* ========== Prefab Inspector Styles ========== */
+
+.prefab-inspector .inspector-header {
+  border-left: 3px solid #4ade80;
+}
+
+.prefab-hierarchy {
+  background: #1a1a1a;
+  border-radius: 4px;
+  padding: 4px 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.prefab-entity-node {
+  font-size: 11px;
+}
+
+.prefab-entity-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  cursor: pointer;
+  border-radius: 2px;
+}
+
+.prefab-entity-row:hover {
+  background: #2a2a2a;
+}
+
+.prefab-entity-expand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  color: #666;
+}
+
+.prefab-entity-icon {
+  color: #4ade80;
+  flex-shrink: 0;
+}
+
+.prefab-entity-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #ccc;
+}
+
+.prefab-entity-components {
+  color: #666;
+  font-size: 10px;
+}
+
+.prefab-component-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.prefab-component-type-tag {
+  display: inline-block;
+  padding: 2px 6px;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 3px;
+  font-size: 10px;
+  color: #a78bfa;
+}
+
+.prefab-instantiate-btn:hover {
+  background: #22c55e !important;
+}
+
+/* ========== Prefab Property Override Styles ========== */
+/* 预制体属性覆盖样式 */
+
+/* Property row with override indicator | 带覆盖指示的属性行 */
+.property-row.overridden {
+  position: relative;
+}
+
+.property-row.overridden::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: #3b82f6;
+  border-radius: 2px 0 0 2px;
+}
+
+.property-row.overridden .property-label {
+  color: #60a5fa;
+  font-weight: 600;
+}
+
+/* Override indicator dot for compact views | 紧凑视图的覆盖指示点 */
+.property-override-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 6px;
+  height: 6px;
+  background: #3b82f6;
+  border-radius: 50%;
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+
+/* Transform input override state | Transform 输入框覆盖状态 */
+.transform-axis-input.overridden {
+  border-color: #3b82f6;
+  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.2);
+}
+
+.transform-axis-input.overridden .transform-axis-bar {
+  background: #3b82f6;
+}
+
+/* Context menu for reverting property | 还原属性的上下文菜单 */
+.property-context-menu {
+  position: fixed;
+  background: #2d2d2d;
+  border: 1px solid #3e3e3e;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  z-index: 9999;
+  min-width: 140px;
+  padding: 4px 0;
+}
+
+.property-context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  color: #ccc;
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.property-context-menu-item:hover {
+  background: #3a3a3a;
+}
+
+.property-context-menu-item.revert {
+  color: #60a5fa;
+}
+
+.property-context-menu-item.revert:hover {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+/* Component header prefab instance indicator | 组件头部预制体实例指示 */
+.component-item-header.prefab-instance {
+  border-left: 2px solid #3b82f6;
+}
+
+.component-item-header.prefab-instance .component-item-name::after {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: #3b82f6;
+  border-radius: 50%;
+  margin-left: 6px;
+  vertical-align: middle;
 }

@@ -6,11 +6,10 @@
  * This is the unified entry point for editor preview and standalone runtime
  */
 
-import { Core, Scene, SceneSerializer, HierarchySystem } from '@esengine/ecs-framework';
+import { Core, Scene, SceneSerializer, HierarchySystem, PluginServiceRegistry, createServiceToken } from '@esengine/ecs-framework';
 import {
     EngineBridge,
     EngineRenderSystem,
-    CameraSystem,
     EngineBridgeToken,
     RenderSystemToken,
     EngineIntegrationToken,
@@ -21,15 +20,25 @@ import {
     TransformSystem,
     InputSystem,
     Input,
-    PluginServiceRegistry,
     TransformTypeToken,
-    createServiceToken
+    CanvasElementToken
 } from '@esengine/engine-core';
 import { AssetManager, EngineIntegration, AssetManagerToken } from '@esengine/asset-system';
 
 // ============================================================================
 // 本地服务令牌定义 | Local Service Token Definitions
-// 用于访问各模块注册的服务 | For accessing services registered by modules
+// ============================================================================
+// 这些令牌使用 createServiceToken() 本地定义，而不是从源模块导入。
+// 这是有意为之：
+// 1. runtime-core 应保持与 ui/sprite/behavior-tree 等模块的松耦合
+// 2. createServiceToken() 使用 Symbol.for()，确保相同名称在运行时匹配
+// 3. 本地接口提供类型安全，无需引入模块依赖
+//
+// These tokens are defined locally using createServiceToken() instead of
+// importing from source modules. This is intentional:
+// 1. runtime-core should remain loosely coupled to ui/sprite/behavior-tree etc.
+// 2. createServiceToken() uses Symbol.for(), ensuring same names match at runtime
+// 3. Local interfaces provide type safety without introducing module dependencies
 // ============================================================================
 
 /**
@@ -88,6 +97,7 @@ const Physics2DSystemToken = createServiceToken<IPhysicsSystem>('physics2DSystem
 
 // Tilemap 模块服务令牌 | Tilemap module service tokens
 const TilemapSystemToken = createServiceToken<ITilemapSystem>('tilemapSystem');
+
 import {
     runtimePluginManager,
     type SystemContext,
@@ -154,7 +164,6 @@ export class GameRuntime {
     private _bridge: EngineBridge | null = null;
     private _scene: Scene | null = null;
     private _renderSystem: EngineRenderSystem | null = null;
-    private _cameraSystem: CameraSystem | null = null;
     private _inputSystem: InputSystem | null = null;
     private _assetManager: AssetManager | null = null;
     private _engineIntegration: EngineIntegration | null = null;
@@ -174,7 +183,8 @@ export class GameRuntime {
     private _systemContext: SystemContext | null = null;
 
     // 场景快照（用于编辑器预览后恢复）
-    private _sceneSnapshot: string | null = null;
+    // 支持二进制格式以提升性能
+    private _sceneSnapshot: string | Uint8Array | null = null;
 
     // Gizmo 注册表注入函数
     private _gizmoDataProvider?: (component: any, entity: any, isSelected: boolean) => any;
@@ -318,8 +328,8 @@ export class GameRuntime {
                 this._inputSystem.setInputSubsystem(inputSubsystem);
             }
 
-            this._cameraSystem = new CameraSystem(this._bridge);
-            this._scene.addSystem(this._cameraSystem);
+            // CameraSystem 由 CameraPlugin 通过插件系统创建
+            // CameraSystem is created by CameraPlugin via plugin system
 
             this._renderSystem = new EngineRenderSystem(this._bridge, TransformComponent);
 
@@ -351,6 +361,13 @@ export class GameRuntime {
             services.register(EngineIntegrationToken, this._engineIntegration);
             services.register(AssetManagerToken, this._assetManager);
             services.register(TransformTypeToken, TransformComponent);
+
+            // 注册 Canvas 元素（用于坐标转换等）
+            // Register canvas element (for coordinate conversion, etc.)
+            const canvas = this._platform.getCanvas();
+            if (canvas) {
+                services.register(CanvasElementToken, canvas);
+            }
 
             this._systemContext = {
                 isEditor: this._platform.isEditorMode(),
@@ -516,6 +533,12 @@ export class GameRuntime {
             this._renderSystem.setPreviewMode(true);
         }
 
+        // 禁用编辑器模式，启用 InputSystem 和组件生命周期回调
+        // Disable editor mode to enable InputSystem and component lifecycle callbacks
+        if (this._scene) {
+            this._scene.isEditorMode = false;
+        }
+
         // 调用场景 begin() 触发延迟的组件生命周期回调
         // Call scene begin() to trigger deferred component lifecycle callbacks
         if (this._scene) {
@@ -575,6 +598,12 @@ export class GameRuntime {
         // 禁用预览模式
         if (this._renderSystem) {
             this._renderSystem.setPreviewMode(false);
+        }
+
+        // 恢复编辑器模式（如果是编辑器平台）
+        // Restore editor mode (if editor platform)
+        if (this._scene && this._platform.isEditorMode()) {
+            this._scene.isEditorMode = true;
         }
 
         // 解绑 UI 输入
@@ -848,19 +877,41 @@ export class GameRuntime {
     /**
      * 保存场景快照
      * Save scene snapshot
+     *
+     * 使用二进制格式提升序列化性能，并支持 EntityRef 的正确序列化。
+     * 在保存前清除纹理缓存，确保恢复时能够从干净状态重新加载纹理。
+     *
+     * Uses binary format for better serialization performance and supports proper
+     * EntityRef serialization. Clears texture cache before saving to ensure
+     * clean reload on restore.
+     *
+     * @param options 可选配置
+     * @param options.useJson 是否使用 JSON 格式（用于调试），默认 false 使用二进制
      */
-    saveSceneSnapshot(): boolean {
+    saveSceneSnapshot(options?: { useJson?: boolean }): boolean {
         if (!this._scene) {
             console.warn('[GameRuntime] Cannot save snapshot: no scene');
             return false;
         }
 
         try {
+            // 清除所有纹理缓存（确保恢复时重新加载）
+            // Clear all texture caches (ensures reload on restore)
+            // clearTextureMappings() 内部会同时清除 Rust 层和 JS 层的纹理缓存
+            // clearTextureMappings() internally clears both Rust and JS layer texture caches
+            if (this._engineIntegration) {
+                this._engineIntegration.clearTextureMappings();
+            }
+
+            // 使用二进制格式提升性能（默认）或 JSON 用于调试
+            // Use binary format for performance (default) or JSON for debugging
+            const format = options?.useJson ? 'json' : 'binary';
+
             this._sceneSnapshot = SceneSerializer.serialize(this._scene, {
-                format: 'json',
+                format,
                 pretty: false,
                 includeMetadata: false
-            }) as string;
+            });
             return true;
         } catch (error) {
             console.error('[GameRuntime] Failed to save snapshot:', error);
@@ -871,6 +922,14 @@ export class GameRuntime {
     /**
      * 恢复场景快照
      * Restore scene snapshot
+     *
+     * 使用两阶段反序列化确保 EntityRef 引用正确恢复：
+     * 1. 创建所有实体和组件
+     * 2. 解析所有 EntityRef 引用
+     *
+     * Uses two-phase deserialization to ensure EntityRef references are properly restored:
+     * 1. Create all entities and components
+     * 2. Resolve all EntityRef references
      */
     async restoreSceneSnapshot(): Promise<boolean> {
         if (!this._scene || !this._sceneSnapshot) {
@@ -885,7 +944,16 @@ export class GameRuntime {
                 tilemapSystem.clearCache?.();
             }
 
-            // 反序列化场景
+            // 清除所有纹理并重置状态（修复 Play/Stop 后纹理 ID 混乱的问题）
+            // Clear all textures and reset state (fixes texture ID confusion after Play/Stop)
+            // clearTextureMappings() 内部会同时清除 Rust 层和 JS 层的纹理缓存
+            // clearTextureMappings() internally clears both Rust and JS layer texture caches
+            if (this._engineIntegration) {
+                this._engineIntegration.clearTextureMappings();
+            }
+
+            // 反序列化场景（SceneSerializer 内部使用 SerializationContext 处理 EntityRef）
+            // Deserialize scene (SceneSerializer internally uses SerializationContext for EntityRef)
             SceneSerializer.deserialize(this._scene, this._sceneSnapshot, {
                 strategy: 'replace',
                 preserveIds: true
@@ -905,6 +973,20 @@ export class GameRuntime {
      */
     hasSnapshot(): boolean {
         return this._sceneSnapshot !== null;
+    }
+
+    /**
+     * 获取快照大小（用于调试）
+     * Get snapshot size (for debugging)
+     */
+    getSnapshotSize(): number {
+        if (!this._sceneSnapshot) {
+            return 0;
+        }
+        if (typeof this._sceneSnapshot === 'string') {
+            return this._sceneSnapshot.length;
+        }
+        return this._sceneSnapshot.byteLength;
     }
 
     // ===== 多视口 API =====
@@ -963,7 +1045,6 @@ export class GameRuntime {
         }
 
         this._renderSystem = null;
-        this._cameraSystem = null;
         this._inputSystem = null;
         this._systemContext = null;
         this._platform.dispose();

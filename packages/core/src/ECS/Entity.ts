@@ -4,6 +4,7 @@ import { EEntityLifecyclePolicy } from './Core/EntityLifecyclePolicy';
 import { BitMask64Utils, BitMask64Data } from './Utils/BigIntCompatibility';
 import { createLogger } from '../Utils/Logger';
 import { getComponentInstanceTypeName, getComponentTypeName } from './Decorators';
+import { generateGUID } from '../Utils/GUID';
 import type { IScene } from './IScene';
 
 /**
@@ -75,9 +76,22 @@ export class Entity {
     public name: string;
 
     /**
-     * 实体唯一标识符
+     * 实体唯一标识符（运行时 ID）
+     *
+     * Runtime identifier for fast lookups.
      */
     public readonly id: number;
+
+    /**
+     * 持久化唯一标识符（GUID）
+     *
+     * 用于序列化/反序列化时保持实体引用一致性。
+     * 在场景保存和加载时保持不变。
+     *
+     * Persistent identifier for serialization.
+     * Remains stable across save/load cycles.
+     */
+    public readonly persistentId: string;
 
     /**
      * 所属场景引用
@@ -130,11 +144,13 @@ export class Entity {
      * 构造函数
      *
      * @param name - 实体名称
-     * @param id - 实体唯一标识符
+     * @param id - 实体唯一标识符（运行时 ID）
+     * @param persistentId - 持久化标识符（可选，用于反序列化时恢复）
      */
-    constructor(name: string, id: number) {
+    constructor(name: string, id: number, persistentId?: string) {
         this.name = name;
         this.id = id;
+        this.persistentId = persistentId ?? generateGUID();
     }
 
     /**
@@ -779,7 +795,7 @@ export class Entity {
      * @returns 实体的字符串描述
      */
     public toString(): string {
-        return `Entity[${this.name}:${this.id}]`;
+        return `Entity[${this.name}:${this.id}:${this.persistentId.slice(0, 8)}]`;
     }
 
     /**
@@ -790,6 +806,7 @@ export class Entity {
     public getDebugInfo(): {
         name: string;
         id: number;
+        persistentId: string;
         enabled: boolean;
         active: boolean;
         destroyed: boolean;
@@ -801,6 +818,7 @@ export class Entity {
         return {
             name: this.name,
             id: this.id,
+            persistentId: this.persistentId,
             enabled: this._enabled,
             active: this._active,
             destroyed: this._isDestroyed,

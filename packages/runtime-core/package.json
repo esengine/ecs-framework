@@ -23,6 +23,7 @@
     },
     "dependencies": {
         "@esengine/ecs-framework": "workspace:*",
+        "@esengine/ecs-framework-math": "workspace:*",
         "@esengine/ecs-engine-bindgen": "workspace:*",
         "@esengine/engine-core": "workspace:*",
         "@esengine/asset-system": "workspace:*",

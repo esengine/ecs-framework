@@ -25,20 +25,15 @@ export enum CollisionDetectionMode2D {
     Continuous = 1
 }
 
-/**
- * 2D 向量
- */
-export interface Vector2 {
-    x: number;
-    y: number;
-}
+// 使用 IVector2 接口 | Use IVector2 interface
+import type { IVector2 } from '@esengine/ecs-framework-math';
 
 /**
  * 物理配置
  */
 export interface Physics2DConfig {
     /** 重力向量 */
-    gravity: Vector2;
+    gravity: IVector2;
     /** 固定时间步长（秒） */
     timestep: number;
     /** 每帧最大子步数 */
@@ -98,9 +93,9 @@ export interface RaycastHit2D {
     /** 命中的实体 ID */
     entityId: number;
     /** 命中点 */
-    point: Vector2;
+    point: IVector2;
     /** 命中面的法线 */
-    normal: Vector2;
+    normal: IVector2;
     /** 射线起点到命中点的距离 */
     distance: number;
     /** 命中的碰撞体句柄 */

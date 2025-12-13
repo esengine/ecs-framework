@@ -1,11 +1,11 @@
 import type { ComponentRegistry as ComponentRegistryType, IScene } from '@esengine/ecs-framework';
-import type { IRuntimeModule, IPlugin, ModuleManifest, SystemContext } from '@esengine/engine-core';
+import type { IRuntimeModule, IRuntimePlugin, ModuleManifest, SystemContext } from '@esengine/engine-core';
 import { SpriteComponent } from './SpriteComponent';
 import { SpriteAnimatorComponent } from './SpriteAnimatorComponent';
 import { SpriteAnimatorSystem } from './systems/SpriteAnimatorSystem';
 import { SpriteAnimatorSystemToken } from './tokens';
 
-export type { SystemContext, ModuleManifest, IRuntimeModule, IPlugin };
+export type { SystemContext, ModuleManifest, IRuntimeModule, IRuntimePlugin };
 
 // 重新导出 tokens | Re-export tokens
 export { SpriteAnimatorSystemToken } from './tokens';
@@ -48,7 +48,7 @@ const manifest: ModuleManifest = {
     requiresWasm: true
 };
 
-export const SpritePlugin: IPlugin = {
+export const SpritePlugin: IRuntimePlugin = {
     manifest,
     runtimeModule: new SpriteRuntimeModule()
 };

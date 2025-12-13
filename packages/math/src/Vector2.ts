@@ -1,4 +1,15 @@
 /**
+ * 2D 向量数据接口
+ *
+ * 轻量级数据结构，用于组件属性和序列化。
+ * Lightweight data structure for component properties and serialization.
+ */
+export interface IVector2 {
+    x: number;
+    y: number;
+}
+
+/**
  * 2D向量类
  *
  * 提供完整的2D向量运算功能，包括：
@@ -7,7 +18,7 @@
  * - 几何运算（距离、角度、投影）
  * - 变换操作（旋转、反射、插值）
  */
-export class Vector2 {
+export class Vector2 implements IVector2 {
     /** X分量 */
     public x: number;
 

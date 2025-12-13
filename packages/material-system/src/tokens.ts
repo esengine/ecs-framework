@@ -6,7 +6,7 @@
  * Following "who defines interface, who exports Token" principle.
  */
 
-import { createServiceToken } from '@esengine/engine-core';
+import { createServiceToken } from '@esengine/ecs-framework';
 import type { Material } from './Material';
 import type { Shader } from './Shader';
 import type { IEngineBridge } from './MaterialManager';

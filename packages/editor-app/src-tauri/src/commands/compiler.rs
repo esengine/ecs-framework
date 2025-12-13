@@ -106,6 +106,53 @@ pub struct FileChangeEvent {
     pub paths: Vec<String>,
 }
 
+/// Install esbuild globally using npm.
+/// 使用 npm 全局安装 esbuild。
+///
+/// # Returns | 返回
+/// Progress messages as the installation proceeds.
+/// 安装过程中的进度消息。
+#[command]
+pub async fn install_esbuild(app: AppHandle) -> Result<(), String> {
+    println!("[Environment] Starting esbuild installation...");
+
+    // Emit progress event | 发送进度事件
+    let _ = app.emit("esbuild-install:progress", "Checking npm...");
+
+    // Check if npm is available | 检查 npm 是否可用
+    let npm_cmd = if cfg!(windows) { "npm.cmd" } else { "npm" };
+    let npm_check = Command::new(npm_cmd)
+        .arg("--version")
+        .output()
+        .map_err(|_| "npm not found. Please install Node.js first. | 未找到 npm，请先安装 Node.js。".to_string())?;
+
+    if !npm_check.status.success() {
+        return Err("npm not working properly. | npm 无法正常工作。".to_string());
+    }
+
+    let _ = app.emit("esbuild-install:progress", "Installing esbuild globally...");
+    println!("[Environment] Running: npm install -g esbuild");
+
+    // Install esbuild globally | 全局安装 esbuild
+    let output = Command::new(npm_cmd)
+        .args(&["install", "-g", "esbuild"])
+        .output()
+        .map_err(|e| format!("Failed to run npm install | npm install 执行失败: {}", e))?;
+
+    if output.status.success() {
+        println!("[Environment] esbuild installed successfully");
+        let _ = app.emit("esbuild-install:progress", "Installation complete!");
+        let _ = app.emit("esbuild-install:success", true);
+        Ok(())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let error_msg = format!("Failed to install esbuild | 安装 esbuild 失败: {}", stderr);
+        println!("[Environment] {}", error_msg);
+        let _ = app.emit("esbuild-install:error", &error_msg);
+        Err(error_msg)
+    }
+}
+
 /// Check development environment.
 /// 检测开发环境。
 ///
@@ -123,27 +170,12 @@ pub async fn check_environment() -> Result<EnvironmentCheckResult, String> {
 
 /// Check esbuild availability and get its status.
 /// 检查 esbuild 可用性并获取其状态。
+///
+/// Only checks for globally installed esbuild (via npm -g).
+/// 只检测通过 npm 全局安装的 esbuild。
 fn check_esbuild_status() -> ToolStatus {
-    // Try bundled esbuild first | 首先尝试打包的 esbuild
-    if let Some(bundled_path) = find_bundled_esbuild() {
-        match get_esbuild_version(&bundled_path) {
-            Ok(version) => {
-                return ToolStatus {
-                    available: true,
-                    version: Some(version),
-                    path: Some(bundled_path),
-                    source: Some("bundled".to_string()),
-                    error: None,
-                };
-            }
-            Err(e) => {
-                println!("[Environment] Bundled esbuild found but failed to get version: {}", e);
-            }
-        }
-    }
-
-    // Try global esbuild | 尝试全局 esbuild
     let global_esbuild = if cfg!(windows) { "esbuild.cmd" } else { "esbuild" };
+
     match get_esbuild_version(global_esbuild) {
         Ok(version) => {
             ToolStatus {
@@ -160,7 +192,7 @@ fn check_esbuild_status() -> ToolStatus {
                 version: None,
                 path: None,
                 source: None,
-                error: Some("esbuild not found | 未找到 esbuild".to_string()),
+                error: Some("esbuild not installed globally. Please install: npm install -g esbuild | 未全局安装 esbuild，请安装: npm install -g esbuild".to_string()),
             }
         }
     }
@@ -436,6 +468,204 @@ pub async fn watch_scripts(
     Ok(())
 }
 
+/// Watch for file changes in asset directories.
+/// 监视资产目录中的文件变更。
+///
+/// Watches multiple directories (assets, scenes, etc.) for all file types.
+/// 监视多个目录（assets, scenes 等）中的所有文件类型。
+///
+/// Emits "user-code:file-changed" events when files change.
+/// 当文件发生变更时触发 "user-code:file-changed" 事件。
+#[command]
+pub async fn watch_assets(
+    app: AppHandle,
+    watcher_state: State<'_, ScriptWatcherState>,
+    project_path: String,
+    directories: Vec<String>,
+) -> Result<(), String> {
+    // Create a unique key for this watcher set | 为此监视器集创建唯一键
+    let watcher_key = format!("{}/assets", project_path);
+
+    // Check if already watching | 检查是否已在监视
+    {
+        let watchers = watcher_state.watchers.lock().await;
+        if watchers.contains_key(&watcher_key) {
+            println!("[AssetWatcher] Already watching: {}", watcher_key);
+            return Ok(());
+        }
+    }
+
+    // Validate directories exist | 验证目录是否存在
+    let mut watch_paths = Vec::new();
+    for dir in &directories {
+        let watch_path = Path::new(&project_path).join(dir);
+        if watch_path.exists() {
+            watch_paths.push((watch_path, dir.clone()));
+        } else {
+            println!("[AssetWatcher] Directory does not exist, skipping: {}", watch_path.display());
+        }
+    }
+
+    if watch_paths.is_empty() {
+        return Err("No valid directories to watch | 没有有效的目录可监视".to_string());
+    }
+
+    // Create a channel for shutdown signal | 创建关闭信号通道
+    let (shutdown_tx, mut shutdown_rx) = tokio::sync::oneshot::channel::<()>();
+
+    // Clone values for the spawned task | 克隆值以供任务使用
+    let project_path_clone = project_path.clone();
+    let app_clone = app.clone();
+
+    // Spawn file watcher task | 启动文件监视任务
+    tokio::spawn(async move {
+        // Create notify watcher | 创建 notify 监视器
+        let (tx, rx) = channel();
+
+        let mut watcher = match RecommendedWatcher::new(
+            move |res: Result<Event, notify::Error>| {
+                if let Ok(event) = res {
+                    let _ = tx.send(event);
+                }
+            },
+            Config::default().with_poll_interval(Duration::from_millis(500)),
+        ) {
+            Ok(w) => w,
+            Err(e) => {
+                eprintln!("[AssetWatcher] Failed to create watcher: {}", e);
+                return;
+            }
+        };
+
+        // Start watching all directories | 开始监视所有目录
+        for (path, dir_name) in &watch_paths {
+            if let Err(e) = watcher.watch(path, RecursiveMode::Recursive) {
+                eprintln!("[AssetWatcher] Failed to watch {}: {}", dir_name, e);
+            } else {
+                println!("[AssetWatcher] Started watching: {}", path.display());
+            }
+        }
+
+        // Asset file extensions to monitor | 要监视的资产文件扩展名
+        let asset_extensions: std::collections::HashSet<&str> = [
+            // Images
+            "png", "jpg", "jpeg", "webp", "gif", "bmp", "svg",
+            // Audio
+            "mp3", "ogg", "wav", "flac", "m4a",
+            // Data formats
+            "json", "xml", "yaml", "yml", "txt",
+            // Custom asset types
+            "prefab", "ecs", "btree", "particle", "tmx", "tsx",
+            // Scripts (also watch these in assets dir)
+            "ts", "tsx", "js", "jsx",
+            // Materials and shaders
+            "mat", "shader", "glsl", "vert", "frag",
+            // Fonts
+            "ttf", "otf", "woff", "woff2",
+            // 3D assets
+            "gltf", "glb", "obj", "fbx",
+        ].into_iter().collect();
+
+        // Debounce state | 防抖状态
+        let mut pending_events: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+        let mut last_event_time = std::time::Instant::now();
+        let debounce_duration = Duration::from_millis(300);
+
+        // Event loop | 事件循环
+        loop {
+            // Check for shutdown | 检查关闭信号
+            if shutdown_rx.try_recv().is_ok() {
+                println!("[AssetWatcher] Stopping watcher for: {}", project_path_clone);
+                break;
+            }
+
+            // Check for file events with timeout | 带超时检查文件事件
+            match rx.recv_timeout(Duration::from_millis(100)) {
+                Ok(event) => {
+                    // Filter for asset files | 过滤资产文件
+                    let valid_paths: Vec<(String, String)> = event
+                        .paths
+                        .iter()
+                        .filter(|p| {
+                            // Skip .meta files | 跳过 .meta 文件
+                            if p.to_string_lossy().ends_with(".meta") {
+                                return false;
+                            }
+                            // Check extension | 检查扩展名
+                            let ext = p.extension().and_then(|e| e.to_str()).unwrap_or("");
+                            asset_extensions.contains(ext.to_lowercase().as_str())
+                        })
+                        .map(|p| {
+                            let path_str = p.to_string_lossy().to_string();
+                            let change_type = match event.kind {
+                                EventKind::Create(_) => "create",
+                                EventKind::Modify(_) => "modify",
+                                EventKind::Remove(_) => "remove",
+                                _ => "modify",
+                            };
+                            (path_str, change_type.to_string())
+                        })
+                        .collect();
+
+                    if !valid_paths.is_empty() {
+                        // Only handle create/modify/remove events | 只处理创建/修改/删除事件
+                        match event.kind {
+                            EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
+                                for (path, change_type) in valid_paths {
+                                    pending_events.insert(path, change_type);
+                                }
+                                last_event_time = std::time::Instant::now();
+                            }
+                            _ => continue,
+                        };
+                    }
+                }
+                Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+                    // Check if we should emit pending events (debounce) | 检查是否应该发送待处理事件（防抖）
+                    if !pending_events.is_empty() && last_event_time.elapsed() >= debounce_duration {
+                        // Group by change type | 按变更类型分组
+                        let mut by_type: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+                        for (path, change_type) in pending_events.drain() {
+                            by_type.entry(change_type).or_default().push(path);
+                        }
+
+                        // Emit events for each type | 为每种类型发送事件
+                        for (change_type, paths) in by_type {
+                            let file_event = FileChangeEvent {
+                                change_type,
+                                paths,
+                            };
+
+                            println!("[AssetWatcher] File change detected (debounced): {:?}", file_event);
+
+                            // Emit event to frontend | 向前端发送事件
+                            if let Err(e) = app_clone.emit("user-code:file-changed", file_event) {
+                                eprintln!("[AssetWatcher] Failed to emit event: {}", e);
+                            }
+                        }
+                    }
+                }
+                Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+                    println!("[AssetWatcher] Watcher channel disconnected");
+                    break;
+                }
+            }
+        }
+    });
+
+    // Store watcher handle | 存储监视器句柄
+    {
+        let mut watchers = watcher_state.watchers.lock().await;
+        watchers.insert(
+            watcher_key.clone(),
+            crate::state::WatcherHandle { shutdown_tx },
+        );
+    }
+
+    println!("[AssetWatcher] Watch started for directories: {:?}", directories);
+    Ok(())
+}
+
 /// Stop watching for file changes.
 /// 停止监视文件变更。
 #[command]
@@ -468,32 +698,9 @@ pub async fn stop_watch_scripts(
 /// Find esbuild executable path.
 /// 查找 esbuild 可执行文件路径。
 ///
-/// Search order | 搜索顺序:
-/// 1. Bundled esbuild in app resources | 应用资源中打包的 esbuild
-/// 2. Local node_modules | 本地 node_modules
-/// 3. Global esbuild | 全局 esbuild
-fn find_esbuild(project_root: &str) -> Result<String, String> {
-    let project_path = Path::new(project_root);
-
-    // Try bundled esbuild first (in app resources) | 首先尝试打包的 esbuild（在应用资源中）
-    if let Some(bundled) = find_bundled_esbuild() {
-        println!("[Compiler] Using bundled esbuild: {}", bundled);
-        return Ok(bundled);
-    }
-
-    // Try local node_modules | 尝试本地 node_modules
-    let local_esbuild = if cfg!(windows) {
-        project_path.join("node_modules/.bin/esbuild.cmd")
-    } else {
-        project_path.join("node_modules/.bin/esbuild")
-    };
-
-    if local_esbuild.exists() {
-        println!("[Compiler] Using local esbuild: {}", local_esbuild.display());
-        return Ok(local_esbuild.to_string_lossy().to_string());
-    }
-
-    // Try global esbuild | 尝试全局 esbuild
+/// Only uses globally installed esbuild (npm -g).
+/// 只使用全局安装的 esbuild (npm -g)。
+fn find_esbuild(_project_root: &str) -> Result<String, String> {
     let global_esbuild = if cfg!(windows) { "esbuild.cmd" } else { "esbuild" };
 
     // Check if global esbuild exists | 检查全局 esbuild 是否存在
@@ -506,45 +713,8 @@ fn find_esbuild(project_root: &str) -> Result<String, String> {
             println!("[Compiler] Using global esbuild");
             Ok(global_esbuild.to_string())
         },
-        _ => Err("esbuild not found. Please install esbuild: npm install -g esbuild | 未找到 esbuild，请安装: npm install -g esbuild".to_string())
+        _ => Err("esbuild not installed globally. Please install: npm install -g esbuild | 未全局安装 esbuild，请安装: npm install -g esbuild".to_string())
     }
-}
-
-/// Find bundled esbuild in app resources.
-/// 在应用资源中查找打包的 esbuild。
-fn find_bundled_esbuild() -> Option<String> {
-    // Get the executable path | 获取可执行文件路径
-    let exe_path = std::env::current_exe().ok()?;
-    let exe_dir = exe_path.parent()?;
-
-    // In development, resources are in src-tauri directory | 开发模式下，资源在 src-tauri 目录
-    // In production, resources are next to the executable | 生产模式下，资源在可执行文件旁边
-    let esbuild_name = if cfg!(windows) { "esbuild.exe" } else { "esbuild" };
-
-    // Try production path (resources next to exe) | 尝试生产路径（资源在 exe 旁边）
-    let prod_path = exe_dir.join("bin").join(esbuild_name);
-    if prod_path.exists() {
-        return Some(prod_path.to_string_lossy().to_string());
-    }
-
-    // Try development path (in src-tauri/bin) | 尝试开发路径（在 src-tauri/bin 中）
-    // This handles running via `cargo tauri dev`
-    let dev_path = exe_dir
-        .ancestors()
-        .find_map(|p| {
-            let candidate = p.join("src-tauri").join("bin").join(esbuild_name);
-            if candidate.exists() {
-                Some(candidate)
-            } else {
-                None
-            }
-        });
-
-    if let Some(path) = dev_path {
-        return Some(path.to_string_lossy().to_string());
-    }
-
-    None
 }
 
 /// Parse esbuild error output.

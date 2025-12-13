@@ -98,28 +98,30 @@ export class BehaviorTreeExecutionSystem extends EntitySystem {
      * 确保行为树资产已加载
      * Ensure behavior tree asset is loaded
      */
-    private async ensureAssetLoaded(assetIdOrPath: string): Promise<void> {
+    private async ensureAssetLoaded(assetGuid: string): Promise<void> {
         const btAssetManager = this.getBTAssetManager();
 
         // 如果资产已存在，直接返回
-        if (btAssetManager.hasAsset(assetIdOrPath)) {
+        if (btAssetManager.hasAsset(assetGuid)) {
             return;
         }
 
         // 使用 AssetManager 加载（必须通过 setAssetManager 设置）
         // Use AssetManager (must be set via setAssetManager)
         if (!this._assetManager) {
-            this.logger.warn(`AssetManager not set, cannot load: ${assetIdOrPath}`);
+            this.logger.warn(`AssetManager not set, cannot load: ${assetGuid}`);
             return;
         }
 
         try {
-            const result = await this._assetManager.loadAssetByPath(assetIdOrPath);
+            // 使用 loadAsset 通过 GUID 加载，而不是 loadAssetByPath
+            // Use loadAsset with GUID instead of loadAssetByPath
+            const result = await this._assetManager.loadAsset(assetGuid);
             if (result && result.asset) {
-                this.logger.debug(`Behavior tree loaded via AssetManager: ${assetIdOrPath}`);
+                this.logger.debug(`Behavior tree loaded via AssetManager: ${assetGuid}`);
             }
         } catch (e) {
-            this.logger.warn(`Failed to load via AssetManager: ${assetIdOrPath}`, e);
+            this.logger.warn(`Failed to load via AssetManager: ${assetGuid}`, e);
         }
     }
 
@@ -142,11 +144,13 @@ export class BehaviorTreeExecutionSystem extends EntitySystem {
      *
      * 优先从 AssetManager 获取（新方式），如果没有再从 BehaviorTreeAssetManager 获取（兼容旧方式）
      */
-    private getTreeData(assetIdOrPath: string): BehaviorTreeData | undefined {
+    private getTreeData(assetGuid: string): BehaviorTreeData | undefined {
         // 1. 优先从 AssetManager 获取（如果已加载）
         // First try AssetManager (preferred way)
         if (this._assetManager) {
-            const cachedAsset = this._assetManager.getAssetByPath<IBehaviorTreeAsset>(assetIdOrPath);
+            // 使用 getAsset 通过 GUID 获取，而不是 getAssetByPath
+            // Use getAsset with GUID instead of getAssetByPath
+            const cachedAsset = this._assetManager.getAsset<IBehaviorTreeAsset>(assetGuid);
             if (cachedAsset?.data) {
                 return cachedAsset.data;
             }
@@ -154,7 +158,7 @@ export class BehaviorTreeExecutionSystem extends EntitySystem {
 
         // 2. 回退到 BehaviorTreeAssetManager（兼容旧方式）
         // Fallback to BehaviorTreeAssetManager (legacy support)
-        return this.getBTAssetManager().getAsset(assetIdOrPath);
+        return this.getBTAssetManager().getAsset(assetGuid);
     }
 
     /**

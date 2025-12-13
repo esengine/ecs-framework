@@ -1,8 +1,10 @@
 import { EntitySystem, Matcher, ECSSystem, Time, Entity, type Component, type ComponentType } from '@esengine/ecs-framework';
 import type { IEngineIntegration, IEngineBridge } from '@esengine/ecs-engine-bindgen';
+import type { IAssetManager } from '@esengine/asset-system';
 import { ParticleSystemComponent } from '../ParticleSystemComponent';
 import { ParticleRenderDataProvider } from '../rendering/ParticleRenderDataProvider';
 import { Physics2DCollisionModule, type IPhysics2DQuery } from '../modules/Physics2DCollisionModule';
+import type { IParticleAsset } from '../loaders/ParticleLoader';
 
 /**
  * 默认粒子纹理 ID
@@ -72,6 +74,7 @@ export class ParticleUpdateSystem extends EntitySystem {
     private _engineIntegration: IEngineIntegration | null = null;
     private _engineBridge: IEngineBridge | null = null;
     private _physics2DQuery: IPhysics2DQuery | null = null;
+    private _assetManager: IAssetManager | null = null;
     private _defaultTextureLoaded: boolean = false;
     private _defaultTextureLoading: boolean = false;
     /** 追踪每个粒子组件上次加载的资产 GUID | Track last loaded asset GUID for each particle component */
@@ -123,6 +126,16 @@ export class ParticleUpdateSystem extends EntitySystem {
      */
     setPhysics2DQuery(query: IPhysics2DQuery | null): void {
         this._physics2DQuery = query;
+    }
+
+    /**
+     * 设置资产管理器
+     * Set asset manager
+     *
+     * @param assetManager - 资产管理器实例 | Asset manager instance
+     */
+    setAssetManager(assetManager: IAssetManager | null): void {
+        this._assetManager = assetManager;
     }
 
     /**
@@ -220,13 +233,48 @@ export class ParticleUpdateSystem extends EntitySystem {
     }
 
     /**
+     * 加载粒子资产
+     * Load particle asset
+     *
+     * 使用注入的 assetManager 加载资产，避免使用全局单例。
+     * Uses injected assetManager to load assets, avoiding global singleton.
+     *
+     * @param guid 资产 GUID | Asset GUID
+     * @param bForceReload 是否强制重新加载 | Whether to force reload
+     * @returns 加载的资产数据或 null | Loaded asset data or null
+     */
+    private async _loadParticleAsset(guid: string, bForceReload: boolean = false): Promise<IParticleAsset | null> {
+        if (!guid || !this._assetManager) {
+            return null;
+        }
+
+        try {
+            const result = await this._assetManager.loadAsset<IParticleAsset>(guid, { forceReload: bForceReload });
+            return result?.asset ?? null;
+        } catch (error) {
+            console.error(`[ParticleUpdateSystem] Error loading asset ${guid}:`, error);
+            return null;
+        }
+    }
+
+    /**
      * 异步初始化粒子系统
      * Async initialize particle system
      */
     private async _initializeParticle(entity: Entity, particle: ParticleSystemComponent): Promise<void> {
         // 如果有资产 GUID，先加载资产 | Load asset first if GUID is set
         if (particle.particleAssetGuid) {
-            await particle.loadAsset(particle.particleAssetGuid);
+            const asset = await this._loadParticleAsset(particle.particleAssetGuid);
+            if (asset) {
+                particle.setAssetData(asset);
+                // 应用资产的排序属性 | Apply sorting properties from asset
+                if (asset.sortingLayer) {
+                    particle.sortingLayer = asset.sortingLayer;
+                }
+                if (asset.orderInLayer !== undefined) {
+                    particle.orderInLayer = asset.orderInLayer;
+                }
+            }
         }
 
         // 初始化粒子系统（不自动播放，由下面的逻辑控制）
@@ -301,7 +349,17 @@ export class ParticleUpdateSystem extends EntitySystem {
         (async () => {
             try {
                 if (currentGuid) {
-                    await particle.loadAsset(currentGuid);
+                    const asset = await this._loadParticleAsset(currentGuid);
+                    if (asset) {
+                        particle.setAssetData(asset);
+                        // 应用资产的排序属性 | Apply sorting properties from asset
+                        if (asset.sortingLayer) {
+                            particle.sortingLayer = asset.sortingLayer;
+                        }
+                        if (asset.orderInLayer !== undefined) {
+                            particle.orderInLayer = asset.orderInLayer;
+                        }
+                    }
                     // 加载纹理 | Load texture
                     await this.loadParticleTexture(particle);
 
@@ -340,24 +398,23 @@ export class ParticleUpdateSystem extends EntitySystem {
         // 已经加载过就跳过 | Skip if already loaded
         if (particle.textureId > 0) return;
 
-        // 从已加载的资产获取纹理路径 | Get texture path from loaded asset
-        // 支持 textureGuid 和 texturePath（编辑器可能使用后者）
-        // Support both textureGuid and texturePath (editor may use the latter)
+        // 从已加载的资产获取纹理 GUID | Get texture GUID from loaded asset
         const asset = particle.loadedAsset;
-        const texturePath = asset?.textureGuid || asset?.texturePath || particle.textureGuid;
+        const textureGuid = asset?.textureGuid || particle.textureGuid;
 
-        if (texturePath) {
+        if (textureGuid) {
+            // 通过 GUID 加载纹理 | Load texture by GUID
             try {
-                const textureId = await this._engineIntegration.loadTextureForComponent(texturePath);
+                const textureId = await this._engineIntegration.loadTextureByGuid(textureGuid);
                 particle.textureId = textureId;
             } catch (error) {
-                console.error('[ParticleUpdateSystem] Failed to load texture:', texturePath, error);
+                console.error('[ParticleUpdateSystem] Failed to load texture by GUID:', textureGuid, error);
                 // 加载失败时使用默认纹理 | Use default texture on load failure
                 await this._ensureDefaultTexture();
                 particle.textureId = DEFAULT_PARTICLE_TEXTURE_ID;
             }
         } else {
-            // 没有纹理路径时使用默认粒子纹理 | Use default particle texture when no path
+            // 没有纹理 GUID 时使用默认粒子纹理 | Use default particle texture when no GUID
             await this._ensureDefaultTexture();
             particle.textureId = DEFAULT_PARTICLE_TEXTURE_ID;
         }

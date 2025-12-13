@@ -8,3 +8,4 @@ export * from './Debug';
 export * from './Logger';
 export * from './BinarySerializer';
 export * from './Profiler';
+export * from './GUID';

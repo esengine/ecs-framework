@@ -13,6 +13,7 @@ import { getSerializationMetadata } from './SerializationDecorators';
 import { BinarySerializer } from '../../Utils/BinarySerializer';
 import { HierarchySystem } from '../Systems/HierarchySystem';
 import { HierarchyComponent } from '../Components/HierarchyComponent';
+import { SerializationContext } from './SerializationContext';
 
 /**
  * 场景序列化格式
@@ -216,6 +217,14 @@ export class SceneSerializer {
     /**
      * 反序列化场景
      *
+     * 使用两阶段反序列化：
+     * 1. 创建所有实体和组件，收集待解析的 EntityRef
+     * 2. 解析所有 EntityRef，建立正确的对象引用
+     *
+     * Deserialize scene using two-phase approach:
+     * 1. Create all entities and components, collect pending EntityRefs
+     * 2. Resolve all EntityRefs, establish correct object references
+     *
      * @param scene 目标场景
      * @param saveData 序列化的数据（JSON字符串或二进制Uint8Array）
      * @param options 反序列化选项
@@ -266,14 +275,20 @@ export class SceneSerializer {
         // 获取层级系统
         const hierarchySystem = scene.getSystem(HierarchySystem);
 
-        // 反序列化实体
+        // ========== 阶段 1：创建实体和组件，收集 EntityRef ==========
+        // Phase 1: Create entities and components, collect EntityRefs
+        const context = new SerializationContext();
+        context.setPreserveIds(opts.preserveIds || false);
+
+        // 反序列化实体（传入 context 收集 EntityRef）
         const { rootEntities, allEntities } = EntitySerializer.deserializeEntities(
             serializedScene.entities,
             componentRegistry,
             idGenerator,
             opts.preserveIds || false,
             scene,
-            hierarchySystem
+            hierarchySystem,
+            context
         );
 
         // 将所有实体添加到场景（包括子实体）
@@ -286,6 +301,18 @@ export class SceneSerializer {
         // 统一清理缓存（批量操作完成后）
         scene.querySystem.clearCache();
         scene.clearSystemEntityCaches();
+
+        // ========== 阶段 2：解析所有 EntityRef ==========
+        // Phase 2: Resolve all EntityRefs
+        const resolvedCount = context.resolveAllReferences();
+        const unresolvedCount = context.getUnresolvedCount();
+
+        if (unresolvedCount > 0) {
+            console.warn(
+                `[SceneSerializer] ${unresolvedCount} EntityRef(s) could not be resolved. ` +
+                `Resolved: ${resolvedCount}, Total pending: ${context.getPendingCount()}`
+            );
+        }
 
         // 反序列化场景自定义数据
         if (serializedScene.sceneData) {

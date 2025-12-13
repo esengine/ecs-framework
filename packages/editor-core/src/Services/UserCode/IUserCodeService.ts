@@ -42,6 +42,21 @@ export interface UserScriptInfo {
 }
 
 /**
+ * SDK module info for shim generation.
+ * 用于生成 shim 的 SDK 模块信息。
+ */
+export interface SDKModuleInfo {
+    /** Module ID (e.g., "particle", "engine-core") | 模块 ID */
+    id: string;
+    /** Full package name (e.g., "@esengine/particle") | 完整包名 */
+    name: string;
+    /** Whether module has runtime code | 模块是否有运行时代码 */
+    hasRuntime?: boolean;
+    /** Global key for window.__ESENGINE__ (optional, defaults to camelCase of id) | 全局键名 */
+    globalKey?: string;
+}
+
+/**
  * User code compilation options.
  * 用户代码编译选项。
  */
@@ -58,6 +73,16 @@ export interface UserCodeCompileOptions {
     minify?: boolean;
     /** Output format | 输出格式 */
     format?: 'esm' | 'iife';
+    /**
+     * SDK modules for shim generation.
+     * 用于生成 shim 的 SDK 模块列表。
+     *
+     * If provided, shims will be created for these modules.
+     * Typically obtained from RuntimeResolver.getAvailableModules().
+     * 如果提供，将为这些模块创建 shim。
+     * 通常从 RuntimeResolver.getAvailableModules() 获取。
+     */
+    sdkModules?: SDKModuleInfo[];
 }
 
 /**
@@ -122,6 +147,62 @@ export interface HotReloadEvent {
     previousModule?: UserCodeModule;
     /** New module | 新模块 */
     newModule: UserCodeModule;
+}
+
+/**
+ * Hot reloadable component/system interface.
+ * 可热更新的组件/系统接口。
+ *
+ * Implement this interface in user components or systems to preserve state
+ * during hot reload. Without this interface, hot reload only updates the
+ * prototype chain; with it, you can save and restore custom state.
+ *
+ * 在用户组件或系统中实现此接口以在热更新时保留状态。
+ * 如果不实现此接口，热更新只会更新原型链；实现后，可以保存和恢复自定义状态。
+ *
+ * @example
+ * ```typescript
+ * @ECSComponent('MyComponent')
+ * class MyComponent extends Component implements IHotReloadable {
+ *     private _cachedData: Map<string, any> = new Map();
+ *
+ *     onBeforeHotReload(): Record<string, unknown> {
+ *         // Save state that needs to survive hot reload
+ *         return {
+ *             cachedData: Array.from(this._cachedData.entries())
+ *         };
+ *     }
+ *
+ *     onAfterHotReload(state: Record<string, unknown>): void {
+ *         // Restore state after hot reload
+ *         const entries = state.cachedData as [string, any][];
+ *         this._cachedData = new Map(entries);
+ *     }
+ * }
+ * ```
+ */
+export interface IHotReloadable {
+    /**
+     * Called before hot reload to save state.
+     * 在热更新前调用以保存状态。
+     *
+     * Return an object containing any state that needs to survive the hot reload.
+     * The returned object will be passed to onAfterHotReload after the prototype is updated.
+     *
+     * 返回包含需要保留的状态的对象。
+     * 返回的对象将在原型更新后传递给 onAfterHotReload。
+     *
+     * @returns State object to preserve | 需要保留的状态对象
+     */
+    onBeforeHotReload?(): Record<string, unknown>;
+
+    /**
+     * Called after hot reload to restore state.
+     * 在热更新后调用以恢复状态。
+     *
+     * @param state - State saved by onBeforeHotReload | onBeforeHotReload 保存的状态
+     */
+    onAfterHotReload?(state: Record<string, unknown>): void;
 }
 
 /**

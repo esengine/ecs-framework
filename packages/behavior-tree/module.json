@@ -1,6 +1,7 @@
 {
   "id": "behavior-tree",
   "name": "@esengine/behavior-tree",
+  "globalKey": "behaviorTree",
   "displayName": "Behavior Tree",
   "description": "AI behavior tree system | AI 行为树系统",
   "version": "1.0.0",
@@ -29,6 +30,9 @@
     "systems": [
       "BehaviorTreeSystem"
     ],
+    "loaders": [
+      "BehaviorTreeLoader"
+    ],
     "other": [
       "BehaviorTree",
       "BTNode",
@@ -37,6 +41,9 @@
       "Condition",
       "Action"
     ]
+  },
+  "assetExtensions": {
+    ".btree": "behavior-tree"
   },
   "editorPackage": "@esengine/behavior-tree-editor",
   "requiresWasm": false,

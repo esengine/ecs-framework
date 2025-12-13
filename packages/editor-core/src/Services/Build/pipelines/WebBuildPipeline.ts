@@ -729,21 +729,64 @@ ${userScriptImports}
      * Step 4: Copy asset files.
      * 步骤 4：复制资产文件。
      */
+    /**
+     * Default asset extensions (base types only).
+     * 默认资产扩展名（仅基础类型）。
+     *
+     * Plugin-specific extensions should be declared in module.json's assetExtensions field.
+     * 插件特定的扩展名应在 module.json 的 assetExtensions 字段中声明。
+     */
+    private static readonly DEFAULT_ASSET_EXTENSIONS = [
+        // 图片 | Images
+        '*.png', '*.jpg', '*.jpeg', '*.gif', '*.webp', '*.bmp', '*.svg',
+        // 音频 | Audio
+        '*.mp3', '*.ogg', '*.wav', '*.m4a', '*.aac', '*.flac',
+        // 数据 | Data
+        '*.json', '*.xml', '*.yaml', '*.yml',
+        // 字体 | Fonts
+        '*.ttf', '*.woff', '*.woff2', '*.otf',
+        // 精灵和图集 | Sprites and Atlases
+        '*.atlas', '*.fnt',
+        // Note: Plugin-specific extensions (*.particle, *.btree, *.prefab, etc.)
+        // are now declared in each module's module.json assetExtensions field.
+        // 注意：插件特定的扩展名（*.particle, *.btree, *.prefab 等）
+        // 现在在各模块的 module.json assetExtensions 字段中声明。
+    ];
+
     private async _stepCopyAssets(context: BuildContext): Promise<void> {
         const fs = this._getFileSystem(context);
+        const webConfig = context.config as WebBuildConfig;
 
         const assetsDir = `${context.projectRoot}/assets`;
         const outputAssetsDir = `${context.outputDir}/assets`;
 
         if (await fs.pathExists(assetsDir)) {
-            const count = await fs.copyDirectory(assetsDir, outputAssetsDir, [
-                '*.png', '*.jpg', '*.jpeg', '*.gif', '*.webp',
-                '*.mp3', '*.ogg', '*.wav', '*.m4a',
-                '*.json', '*.xml',
-                '*.ttf', '*.woff', '*.woff2',
-                '*.atlas', '*.fnt'
-            ]);
-            console.log(`[WebBuild] Copied ${count} asset files`);
+            // 优先级：1. 配置提供的扩展名 2. 模块声明的扩展名 3. 默认扩展名
+            // Priority: 1. Config-provided extensions 2. Module-declared extensions 3. Default extensions
+            let extensions: string[];
+
+            if (webConfig.assetExtensions && webConfig.assetExtensions.length > 0) {
+                // 使用配置明确提供的扩展名
+                // Use explicitly provided config extensions
+                extensions = webConfig.assetExtensions;
+            } else {
+                // 从模块收集扩展名并与默认值合并
+                // Collect from modules and merge with defaults
+                const moduleExtensions = this._collectModuleAssetExtensions(context);
+                const combinedPatterns = new Set([
+                    ...WebBuildPipeline.DEFAULT_ASSET_EXTENSIONS,
+                    ...moduleExtensions.patterns
+                ]);
+                extensions = Array.from(combinedPatterns);
+
+                // 存储合并后的类型映射供后续步骤使用
+                // Store merged type map for later steps
+                context.data.set('moduleAssetTypeMap', moduleExtensions.typeMap);
+            }
+
+            console.log(`[WebBuild] Using ${extensions.length} extension patterns: ${extensions.slice(0, 10).join(', ')}${extensions.length > 10 ? '...' : ''}`);
+            const count = await fs.copyDirectory(assetsDir, outputAssetsDir, extensions);
+            console.log(`[WebBuild] Copied ${count} asset files using ${extensions.length} extension patterns`);
         }
     }
 
@@ -798,6 +841,7 @@ ${userScriptImports}
      */
     private async _stepGenerateCatalog(context: BuildContext): Promise<void> {
         const fs = this._getFileSystem(context);
+        const webConfig = context.config as WebBuildConfig;
 
         // Meta file format from asset-system-editor
         // 来自 asset-system-editor 的 meta 文件格式
@@ -811,12 +855,14 @@ ${userScriptImports}
         }
 
         // Use unified IAssetCatalog format from @esengine/asset-system
-        // 使用 @esengine/asset-system 中统一的 IAssetCatalog 格式
+        // 使用 @esengine/asset-system 中 IRuntimeCatalog 格式（运行时期望 assets 字段）
+        // Use IRuntimeCatalog format from @esengine/asset-system (runtime expects assets field)
         const catalog = {
             version: '1.0.0',
             createdAt: Date.now(),
             loadStrategy: 'file' as const,  // Web builds use file-based loading
-            entries: {} as Record<string, {
+            bundles: {} as Record<string, unknown>,  // Required by IRuntimeCatalog
+            assets: {} as Record<string, {
                 guid: string;
                 path: string;
                 type: string;
@@ -831,16 +877,25 @@ ${userScriptImports}
         const outputAssetsDir = `${context.outputDir}/assets`;
         const outputScenesDir = `${context.outputDir}/scenes`;
 
+        let totalMetaFiles = 0;
+        let skippedNoGuid = 0;
+        let skippedNoOutput = 0;
+        let addedEntries = 0;
+
         for (const dirName of sourceAssetDirs) {
             const sourceDir = `${context.projectRoot}/${dirName}`;
             if (!await fs.pathExists(sourceDir)) continue;
 
-            const metaFiles = await fs.listFilesByExtension(sourceDir, ['.meta'], true);
+            const metaFiles = await fs.listFilesByExtension(sourceDir, ['meta'], true);
+            totalMetaFiles += metaFiles.length;
 
             for (const metaFile of metaFiles) {
                 try {
                     const meta = await fs.readJson<AssetMeta>(metaFile);
-                    if (!meta.guid) continue;
+                    if (!meta.guid) {
+                        skippedNoGuid++;
+                        continue;
+                    }
 
                     const assetSourcePath = metaFile.replace(/\.meta$/, '');
 
@@ -861,29 +916,58 @@ ${userScriptImports}
 
                     relativePath = relativePath.replace(/\\/g, '/');
 
-                    if (!await fs.pathExists(outputPath)) continue;
+                    if (!await fs.pathExists(outputPath)) {
+                        skippedNoOutput++;
+                        continue;
+                    }
 
                     const size = await fs.getFileSize(outputPath);
 
-                    catalog.entries[meta.guid] = {
+                    // 获取资产类型：
+                    // 1. 如果 meta.type 存在且不是 "custom"，使用它
+                    // 2. 否则尝试从模块声明的扩展名推断
+                    // 3. 最后回退到 meta.type（可能是 "custom"）
+                    // Get asset type:
+                    // 1. If meta.type exists and is not "custom", use it
+                    // 2. Otherwise try to infer from module-declared extensions
+                    // 3. Fall back to meta.type (may be "custom")
+                    let assetType = meta.type;
+                    const fileName = assetSourcePath.split(/[/\\]/).pop() || '';
+
+                    // 如果类型是 "custom" 或空，尝试从模块扩展名推断
+                    // If type is "custom" or empty, try to infer from module extensions
+                    if (!assetType || assetType === 'custom') {
+                        const inferredType = this._getAssetTypeFromFileName(fileName, webConfig, context);
+                        // 只有推断出具体类型时才使用（不是 "data" 这种通用类型）
+                        // Only use inferred type if it's specific (not generic like "data")
+                        if (inferredType && inferredType !== 'data') {
+                            assetType = inferredType;
+                        } else if (!assetType) {
+                            assetType = inferredType || 'custom';
+                        }
+                    }
+
+                    catalog.assets[meta.guid] = {
                         guid: meta.guid,
                         path: relativePath,
-                        type: meta.type || this._getAssetType(assetSourcePath.split('.').pop() || ''),
+                        type: assetType,
                         size,
                         hash: hashFileInfo(relativePath, size)
                     };
+                    addedEntries++;
                 } catch (error) {
                     console.warn(`[WebBuild] Failed to process meta file: ${metaFile}`, error);
                 }
             }
         }
 
+
         await fs.writeFile(
             `${context.outputDir}/asset-catalog.json`,
             JSON.stringify(catalog, null, 2)
         );
 
-        console.log(`[WebBuild] Generated asset catalog: ${Object.keys(catalog.entries).length} assets, strategy=${catalog.loadStrategy}`);
+        console.log(`[WebBuild] Generated asset catalog: ${Object.keys(catalog.assets).length} assets, strategy=${catalog.loadStrategy}`);
     }
 
     /**
@@ -901,7 +985,7 @@ ${userScriptImports}
         let mainScenePath = './scenes/main.ecs';
         const scenesDir = `${context.outputDir}/scenes`;
         if (await fs.pathExists(scenesDir)) {
-            const sceneFiles = await fs.listFilesByExtension(scenesDir, ['.ecs', '.scene']);
+            const sceneFiles = await fs.listFilesByExtension(scenesDir, ['ecs', 'scene']);
             if (sceneFiles.length > 0) {
                 const sceneName = sceneFiles[0].split(/[/\\]/).pop();
                 mainScenePath = `./scenes/${sceneName}`;
@@ -1755,15 +1839,156 @@ ${pluginLoads}
 </html>`;
     }
 
-    private _getAssetType(ext: string): string {
-        const typeMap: Record<string, string> = {
-            'png': 'texture', 'jpg': 'texture', 'jpeg': 'texture', 'gif': 'texture', 'webp': 'texture',
-            'mp3': 'audio', 'ogg': 'audio', 'wav': 'audio', 'm4a': 'audio',
-            'json': 'data', 'xml': 'data',
-            'ttf': 'font', 'woff': 'font', 'woff2': 'font',
-            'atlas': 'atlas', 'fnt': 'font'
-        };
-        return typeMap[ext] || 'binary';
+    /**
+     * Default extension to type mapping (base types only).
+     * 默认扩展名到类型的映射（仅基础类型）。
+     *
+     * Plugin-specific mappings should be declared in module.json's assetExtensions field.
+     * 插件特定的映射应在 module.json 的 assetExtensions 字段中声明。
+     */
+    private static readonly DEFAULT_ASSET_TYPE_MAP: Record<string, string> = {
+        // 图片 | Images
+        'png': 'texture', 'jpg': 'texture', 'jpeg': 'texture', 'gif': 'texture',
+        'webp': 'texture', 'bmp': 'texture', 'svg': 'texture',
+        // 音频 | Audio
+        'mp3': 'audio', 'ogg': 'audio', 'wav': 'audio', 'm4a': 'audio',
+        'aac': 'audio', 'flac': 'audio',
+        // 数据 | Data
+        'json': 'data', 'xml': 'data', 'yaml': 'data', 'yml': 'data',
+        // 字体 | Fonts
+        'ttf': 'font', 'woff': 'font', 'woff2': 'font', 'otf': 'font', 'fnt': 'font',
+        // 精灵图集 | Sprite Atlas
+        'atlas': 'atlas',
+        // Note: Plugin-specific types (particle, behavior-tree, prefab, tilemap, etc.)
+        // are now declared in each module's module.json assetExtensions field.
+        // 注意：插件特定的类型（particle, behavior-tree, prefab, tilemap 等）
+        // 现在在各模块的 module.json assetExtensions 字段中声明。
+    };
+
+    /**
+     * Cached type map from config (merged with defaults).
+     * 从配置缓存的类型映射（与默认值合并）。
+     */
+    private _assetTypeMap: Record<string, string> | null = null;
+
+    /**
+     * Get asset type by extension.
+     * 根据扩展名获取资产类型。
+     *
+     * Priority: config.assetTypeMap > moduleAssetTypeMap > DEFAULT_ASSET_TYPE_MAP
+     * 优先级：配置类型映射 > 模块类型映射 > 默认类型映射
+     */
+    private _getAssetType(ext: string, config?: WebBuildConfig, context?: BuildContext): string {
+        const lowerExt = ext.toLowerCase();
+
+        // 1. 配置提供的类型映射
+        // 1. Config-provided type map
+        if (config?.assetTypeMap) {
+            if (!this._assetTypeMap) {
+                // 合并默认值和配置
+                // Merge defaults and config
+                const moduleTypeMap = context?.data.get('moduleAssetTypeMap') as Record<string, string> || {};
+                this._assetTypeMap = {
+                    ...WebBuildPipeline.DEFAULT_ASSET_TYPE_MAP,
+                    ...moduleTypeMap,
+                    ...config.assetTypeMap
+                };
+            }
+            return this._assetTypeMap[lowerExt] || 'binary';
+        }
+
+        // 2. 模块声明的类型映射
+        // 2. Module-declared type map
+        if (context) {
+            const moduleTypeMap = context.data.get('moduleAssetTypeMap') as Record<string, string> | undefined;
+            if (moduleTypeMap && moduleTypeMap[lowerExt]) {
+                return moduleTypeMap[lowerExt];
+            }
+        }
+
+        // 3. 默认类型映射
+        // 3. Default type map
+        return WebBuildPipeline.DEFAULT_ASSET_TYPE_MAP[lowerExt] || 'binary';
+    }
+
+    /**
+     * Get asset type from full filename, supporting compound extensions.
+     * 从完整文件名获取资产类型，支持复合扩展名。
+     *
+     * @param fileName - File name (e.g., "explosion.particle.json")
+     * @param config - Build config
+     * @param context - Build context
+     * @returns Asset type string
+     */
+    private _getAssetTypeFromFileName(fileName: string, config?: WebBuildConfig, context?: BuildContext): string {
+        const lowerName = fileName.toLowerCase();
+
+        // 检查模块声明的复合扩展名
+        // Check module-declared compound extensions
+        const moduleTypeMap = context?.data.get('moduleAssetTypeMap') as Record<string, string> | undefined;
+        if (moduleTypeMap) {
+            // 优先检查复合扩展名（按长度排序，最长优先）
+            // Prioritize compound extensions (sorted by length, longest first)
+            const sortedExts = Object.keys(moduleTypeMap).sort((a, b) => b.length - a.length);
+            for (const ext of sortedExts) {
+                if (lowerName.endsWith(ext)) {
+                    return moduleTypeMap[ext];
+                }
+            }
+        }
+
+        // 回退到简单扩展名
+        // Fallback to simple extension
+        const simpleExt = fileName.split('.').pop() || '';
+        return this._getAssetType(simpleExt, config, context);
+    }
+
+    /**
+     * Convert glob patterns to plain extension list for listFilesByExtension.
+     * 将 glob 模式转换为 listFilesByExtension 所需的简单扩展名列表。
+     *
+     * @param patterns - Glob patterns like ['*.png', '*.jpg']
+     * @returns Plain extensions like ['png', 'jpg']
+     */
+    private _globPatternsToExtensions(patterns: string[]): string[] {
+        return patterns
+            .map(p => {
+                // Remove *.  prefix if present
+                const match = p.match(/^\*\.(.+)$/);
+                return match ? match[1].toLowerCase() : p.toLowerCase();
+            })
+            .filter(ext => ext.length > 0 && !ext.includes('*'));
+    }
+
+    /**
+     * Collect asset extensions from all enabled modules.
+     * 从所有启用的模块收集资产扩展名。
+     *
+     * @param context - Build context containing module list
+     * @returns Glob patterns and type map
+     */
+    private _collectModuleAssetExtensions(context: BuildContext): {
+        patterns: string[];
+        typeMap: Record<string, string>;
+    } {
+        const allModules = context.data.get('allModules') as ModuleManifest[] || [];
+        const patterns: string[] = [];
+        const typeMap: Record<string, string> = {};
+
+        for (const module of allModules) {
+            if (module.assetExtensions) {
+                for (const [ext, type] of Object.entries(module.assetExtensions)) {
+                    // 转换为 glob 模式 | Convert to glob pattern
+                    const cleanExt = ext.startsWith('.') ? ext.substring(1) : ext;
+                    patterns.push(`*.${cleanExt}`);
+
+                    // 添加类型映射 | Add type mapping
+                    typeMap[cleanExt.toLowerCase()] = type;
+                }
+            }
+        }
+
+        return { patterns, typeMap };
     }
 
     private _getStatusForStep(stepId: string): BuildStatus {
@@ -2044,27 +2269,44 @@ ${userScriptImports}
             const assetsDir = `${context.projectRoot}/assets`;
             if (await fs.pathExists(assetsDir)) {
                 console.log('[WebBuild] Inlining assets...');
-                const assetExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'mp3', 'ogg', 'wav', 'ttf', 'woff', 'woff2', 'json'];
+
+                // 优先级：1. 配置提供的扩展名 2. 模块声明的扩展名 3. 默认扩展名
+                // Priority: 1. Config-provided extensions 2. Module-declared extensions 3. Default extensions
+                let extensionPatterns: string[];
+                if (webConfig.assetExtensions && webConfig.assetExtensions.length > 0) {
+                    extensionPatterns = webConfig.assetExtensions;
+                } else {
+                    const moduleExtensions = this._collectModuleAssetExtensions(context);
+                    const combinedPatterns = new Set([
+                        ...WebBuildPipeline.DEFAULT_ASSET_EXTENSIONS,
+                        ...moduleExtensions.patterns
+                    ]);
+                    extensionPatterns = Array.from(combinedPatterns);
+                }
+
+                const assetExtensions = this._globPatternsToExtensions(extensionPatterns);
                 const assetFiles = await fs.listFilesByExtension(assetsDir, assetExtensions, true);
 
                 for (const assetPath of assetFiles) {
-                    const ext = assetPath.split('.').pop()?.toLowerCase() || '';
+                    const fileName = assetPath.split(/[/\\]/).pop() || '';
+                    const ext = fileName.split('.').pop()?.toLowerCase() || '';
                     const relativePath = assetPath.replace(assetsDir, '').replace(/\\/g, '/').replace(/^\//, '');
                     const mimeType = this._getMimeType(ext);
 
                     if (ext === 'json') {
-                        // JSON files are read as text
+                        // JSON files - check for compound extension types
                         const content = await fs.readFile(assetPath);
+                        const assetType = this._getAssetTypeFromFileName(fileName, webConfig, context);
                         assetData[relativePath] = {
                             dataUrl: `data:application/json;base64,${Buffer.from(content).toString('base64')}`,
-                            type: 'data'
+                            type: assetType
                         };
                     } else {
                         // Binary files
                         const base64 = await fs.readBinaryFileAsBase64(assetPath);
                         assetData[relativePath] = {
                             dataUrl: `data:${mimeType};base64,${base64}`,
-                            type: this._getAssetType(ext)
+                            type: this._getAssetTypeFromFileName(fileName, webConfig, context)
                         };
                     }
                 }

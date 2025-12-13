@@ -4,7 +4,7 @@
  */
 
 import { EntitySystem, Matcher, Entity, ComponentType, ECSSystem, Component, Core } from '@esengine/ecs-framework';
-import { TransformComponent } from '@esengine/engine-core';
+import { TransformComponent, sortingLayerManager } from '@esengine/engine-core';
 import { Color } from '@esengine/ecs-framework-math';
 import { SpriteComponent } from '@esengine/sprite';
 import { CameraComponent } from '@esengine/camera';
@@ -24,10 +24,29 @@ export interface ProviderRenderData {
     uvs: Float32Array;
     colors: Uint32Array;
     tileCount: number;
-    /** Sorting order for render ordering | 渲染排序顺序 */
-    sortingOrder: number;
-    /** Texture path for loading (optional, used if textureId is 0) */
-    texturePath?: string;
+    /**
+     * 排序层名称
+     * Sorting layer name
+     *
+     * 决定渲染的大类顺序。默认为 'Default'。
+     * Determines the major render order category. Defaults to 'Default'.
+     */
+    sortingLayer: string;
+    /**
+     * 层内排序顺序
+     * Order within the sorting layer
+     */
+    orderInLayer: number;
+    /** 纹理 GUID（如果 textureId 为 0 则使用）| Texture GUID (used if textureId is 0) */
+    textureGuid?: string;
+    /**
+     * 是否在屏幕空间渲染
+     * Whether to render in screen space
+     *
+     * 覆盖 sortingLayer 的 bScreenSpace 设置，用于粒子等需要动态指定渲染空间的场景。
+     * Overrides sortingLayer's bScreenSpace setting, for particles that need dynamic render space.
+     */
+    bScreenSpace?: boolean;
 }
 
 /**
@@ -244,32 +263,73 @@ export class EngineRenderSystem extends EntitySystem {
      * Process all matched entities.
      * 处理所有匹配的实体。
      *
-     * Rendering is done in two passes:
-     * 1. World Pass: World sprites, tilemaps, gizmos (affected by world camera)
-     * 2. UI Pass: Screen space UI (independent orthographic projection, overlaid on world)
+     * Rendering pipeline:
+     * 渲染管线：
      *
-     * 渲染分两个阶段进行：
-     * 1. 世界阶段：世界 Sprite、瓦片地图、Gizmo（受世界相机影响）
-     * 2. UI 阶段：屏幕空间 UI（独立正交投影，叠加在世界之上）
+     * 1. World Space Pass: Background → Default → Foreground → WorldOverlay
+     *    世界空间阶段：背景 → 默认 → 前景 → 世界覆盖层
+     *
+     * 2. Screen Space Pass (Preview Mode Only): UI → ScreenOverlay → Modal
+     *    屏幕空间阶段（仅预览模式）：UI → 屏幕覆盖层 → 模态层
      *
      * @param entities - Entities to process | 要处理的实体
      */
     protected override process(entities: readonly Entity[]): void {
         // Clear and reuse map for gizmo drawing
-        // 清空并重用映射用于绘制gizmo
+        // 清空并重用映射用于绘制 gizmo
         this.entityRenderMap.clear();
+
+        // Collect all render items separated by render space
+        // 按渲染空间分离收集所有渲染项
+        const worldSpaceItems: Array<{ sortKey: number; sprites: SpriteRenderData[] }> = [];
+        const screenSpaceItems: Array<{ sortKey: number; sprites: SpriteRenderData[] }> = [];
+
+        // Collect sprites from entities (all in world space)
+        // 收集实体的 sprites（都在世界空间）
+        this.collectEntitySprites(entities, worldSpaceItems);
+
+        // Collect render data from providers (e.g., tilemap, particle)
+        // 收集渲染数据提供者的数据（如瓦片地图、粒子）
+        this.collectProviderRenderData(worldSpaceItems, screenSpaceItems);
+
+        // Collect UI render data
+        // 收集 UI 渲染数据
+        if (this.uiRenderDataProvider) {
+            const uiRenderData = this.uiRenderDataProvider.getRenderData();
+            for (const data of uiRenderData) {
+                const uiSprites = this.convertProviderDataToSprites(data);
+                if (uiSprites.length > 0) {
+                    const sortKey = sortingLayerManager.getSortKey(data.sortingLayer, data.orderInLayer);
+                    // UI always goes to screen space in preview mode, world space in editor mode
+                    // UI 在预览模式下始终在屏幕空间，编辑器模式下在世界空间
+                    if (this.previewMode) {
+                        screenSpaceItems.push({ sortKey, sprites: uiSprites });
+                    } else {
+                        worldSpaceItems.push({ sortKey, sprites: uiSprites });
+                    }
+                }
+            }
+        }
 
         // ===== Pass 1: World Space Rendering =====
         // ===== 阶段 1：世界空间渲染 =====
-        // This includes world sprites, tilemaps, and world space UI
-        // 包括世界 Sprite、瓦片地图和世界空间 UI
+        this.renderWorldSpacePass(worldSpaceItems);
 
-        // Collect all render items with sorting order
-        // 收集所有渲染项及其排序顺序
-        const renderItems: Array<{ sortingOrder: number; sprites: SpriteRenderData[] }> = [];
+        // ===== Pass 2: Screen Space Rendering (Preview Mode Only) =====
+        // ===== 阶段 2：屏幕空间渲染（仅预览模式）=====
+        if (this.previewMode && screenSpaceItems.length > 0) {
+            this.renderScreenSpacePass(screenSpaceItems);
+        }
+    }
 
-        // Collect sprites from entities
-        // 收集实体的 sprites
+    /**
+     * Collect sprites from matched entities.
+     * 收集匹配实体的 sprites。
+     */
+    private collectEntitySprites(
+        entities: readonly Entity[],
+        worldSpaceItems: Array<{ sortKey: number; sprites: SpriteRenderData[] }>
+    ): void {
         for (const entity of entities) {
             const sprite = entity.getComponent(SpriteComponent);
             const transform = entity.getComponent(this.transformType) as unknown as ITransformComponent | null;
@@ -278,7 +338,7 @@ export class EngineRenderSystem extends EntitySystem {
                 continue;
             }
 
-            // Calculate UV with flip | 计算带翻转的UV
+            // Calculate UV with flip | 计算带翻转的 UV
             const uv: [number, number, number, number] = [0, 0, 1, 1];
             if (sprite.flipX || sprite.flipY) {
                 if (sprite.flipX) {
@@ -296,40 +356,30 @@ export class EngineRenderSystem extends EntitySystem {
                 ? transform.worldRotation.z
                 : (typeof transform.rotation === 'number' ? transform.rotation : transform.rotation.z);
 
-            // Convert hex color string to packed RGBA | 将十六进制颜色字符串转换为打包的RGBA
+            // Convert hex color string to packed RGBA | 将十六进制颜色字符串转换为打包的 RGBA
             const color = Color.packHexAlpha(sprite.color, sprite.alpha);
 
             // Get texture ID from sprite component
-            // 从精灵组件获取纹理ID
-            // Use Rust engine's path-based texture loading for automatic caching
-            // 使用Rust引擎的基于路径的纹理加载实现自动缓存
+            // 从精灵组件获取纹理 ID
             let textureId = 0;
             const textureSource = sprite.getTextureSource();
             if (textureSource) {
-                // Resolve GUID to path if resolver is available
-                // 如果有解析器，将 GUID 解析为路径
-                const texturePath = this.assetPathResolver
-                    ? this.assetPathResolver(textureSource)
-                    : textureSource;
+                const texturePath = this.resolveAssetPath(textureSource);
                 textureId = this.bridge.getOrLoadTextureByPath(texturePath);
             }
 
-            // Get material ID from GUID (0 = default if not found or no GUID specified)
-            // 从 GUID 获取材质 ID（0 = 默认，如果未找到或未指定 GUID）
+            // Get material ID from GUID
+            // 从 GUID 获取材质 ID
             const materialGuidOrPath = sprite.materialGuid;
-            const materialPath = materialGuidOrPath && this.assetPathResolver
-                ? this.assetPathResolver(materialGuidOrPath)
+            const materialPath = materialGuidOrPath
+                ? this.resolveAssetPath(materialGuidOrPath)
                 : materialGuidOrPath;
             const materialId = materialPath
                 ? getMaterialManager().getMaterialIdByPath(materialPath)
                 : 0;
 
-            // Collect material overrides if any
-            // 收集材质覆盖（如果有）
             const hasOverrides = sprite.hasOverrides();
 
-            // Pass actual display dimensions (sprite size * world transform scale)
-            // 传递实际显示尺寸（sprite尺寸 * 世界变换缩放）
             const renderData: SpriteRenderData = {
                 x: pos.x,
                 y: pos.y,
@@ -342,27 +392,41 @@ export class EngineRenderSystem extends EntitySystem {
                 uv,
                 color,
                 materialId,
-                // Only include overrides if there are any
-                // 仅在有覆盖时包含
                 ...(hasOverrides ? { materialOverrides: sprite.materialOverrides } : {})
             };
 
-            renderItems.push({ sortingOrder: sprite.sortingOrder, sprites: [renderData] });
+            const sortKey = sortingLayerManager.getSortKey(sprite.sortingLayer, sprite.orderInLayer);
+            worldSpaceItems.push({ sortKey, sprites: [renderData] });
             this.entityRenderMap.set(entity.id, renderData);
         }
+    }
 
-        // Collect render data from providers (e.g., tilemap)
+    /**
+     * Collect render data from providers (tilemap, particle, etc.).
+     * 收集渲染数据提供者的数据（瓦片地图、粒子等）。
+     */
+    private collectProviderRenderData(
+        worldSpaceItems: Array<{ sortKey: number; sprites: SpriteRenderData[] }>,
+        screenSpaceItems: Array<{ sortKey: number; sprites: SpriteRenderData[] }>
+    ): void {
         for (const provider of this.renderDataProviders) {
             const renderDataList = provider.getRenderData();
             for (const data of renderDataList) {
-                // Get texture ID - load from path if needed
+                // Determine render space: explicit flag > layer config
+                // 确定渲染空间：显式标志 > 层配置
+                const bScreenSpace = data.bScreenSpace ?? sortingLayerManager.isScreenSpace(data.sortingLayer);
+
+                // Get texture ID - load from GUID if needed
+                // 获取纹理 ID - 如果需要从 GUID 加载
                 let textureId = data.textureIds[0] || 0;
-                if (textureId === 0 && data.texturePath) {
-                    textureId = this.bridge.getOrLoadTextureByPath(data.texturePath);
+                if (textureId === 0 && data.textureGuid) {
+                    const resolvedPath = this.resolveAssetPath(data.textureGuid);
+                    textureId = this.bridge.getOrLoadTextureByPath(resolvedPath);
                 }
 
-                // Convert tilemap render data to sprites
-                const tilemapSprites: SpriteRenderData[] = [];
+                // Convert render data to sprites
+                // 转换渲染数据为 sprites
+                const sprites: SpriteRenderData[] = [];
                 for (let i = 0; i < data.tileCount; i++) {
                     const tOffset = i * 7;
                     const uvOffset = i * 4;
@@ -380,34 +444,38 @@ export class EngineRenderSystem extends EntitySystem {
                         color: data.colors[i]
                     };
 
-                    tilemapSprites.push(renderData);
+                    sprites.push(renderData);
                 }
 
-                if (tilemapSprites.length > 0) {
-                    renderItems.push({ sortingOrder: data.sortingOrder, sprites: tilemapSprites });
-                }
-            }
-        }
+                if (sprites.length > 0) {
+                    const sortKey = sortingLayerManager.getSortKey(data.sortingLayer, data.orderInLayer);
 
-        // Collect UI render data if in editor mode (renders in world space)
-        // 如果在编辑器模式，收集 UI 渲染数据（在世界空间渲染）
-        if (!this.previewMode && this.uiRenderDataProvider) {
-            const uiRenderData = this.uiRenderDataProvider.getRenderData();
-            for (const data of uiRenderData) {
-                const uiSprites = this.convertProviderDataToSprites(data);
-                if (uiSprites.length > 0) {
-                    renderItems.push({ sortingOrder: data.sortingOrder, sprites: uiSprites });
+                    // Route to appropriate render space
+                    // 路由到适当的渲染空间
+                    if (this.previewMode && bScreenSpace) {
+                        screenSpaceItems.push({ sortKey, sprites });
+                    } else {
+                        worldSpaceItems.push({ sortKey, sprites });
+                    }
                 }
             }
         }
+    }
 
-        // Sort by sortingOrder (lower values render first, appear behind)
-        // 按 sortingOrder 排序（值越小越先渲染，显示在后面）
-        renderItems.sort((a, b) => a.sortingOrder - b.sortingOrder);
+    /**
+     * Render world space content.
+     * 渲染世界空间内容。
+     */
+    private renderWorldSpacePass(
+        worldSpaceItems: Array<{ sortKey: number; sprites: SpriteRenderData[] }>
+    ): void {
+        // Sort by sortKey (lower values render first, appear behind)
+        // 按 sortKey 排序（值越小越先渲染，显示在后面）
+        worldSpaceItems.sort((a, b) => a.sortKey - b.sortKey);
 
         // Submit all sprites in sorted order
         // 按排序顺序提交所有 sprites
-        for (const item of renderItems) {
+        for (const item of worldSpaceItems) {
             for (const sprite of item.sprites) {
                 this.batcher.addSprite(sprite);
             }
@@ -418,93 +486,53 @@ export class EngineRenderSystem extends EntitySystem {
             this.bridge.submitSprites(sprites);
         }
 
-        // Draw gizmos for all entities with IGizmoProvider components
-        // 为所有具有 IGizmoProvider 组件的实体绘制 Gizmo
+        // Draw gizmos
+        // 绘制 Gizmo
         if (this.showGizmos) {
             this.drawComponentGizmos();
         }
 
-        // Draw gizmos for selected entities (always, even if no sprites)
-        // 为选中的实体绘制Gizmo（始终绘制，即使没有精灵）
         if (this.showGizmos && this.selectedEntityIds.size > 0) {
             this.drawSelectedEntityGizmos();
         }
 
-        // Draw camera frustum gizmos
-        // 绘制相机视锥体 gizmo
         if (this.showGizmos) {
             this.drawCameraFrustums();
         }
 
-        // Draw UI canvas boundary
-        // 绘制 UI 画布边界
         if (this.showGizmos && this.showUICanvasBoundary && this.uiCanvasWidth > 0 && this.uiCanvasHeight > 0) {
             this.drawUICanvasBoundary();
         }
 
-        // ===== World Pass: Render world content =====
-        // ===== 世界阶段：渲染世界内容 =====
+        // Render world content
+        // 渲染世界内容
         this.bridge.render();
-
-        // ===== Pass 2: Screen Space UI Rendering (Preview Mode Only) =====
-        // ===== 阶段 2：屏幕空间 UI 渲染（仅预览模式）=====
-        // UI is rendered on top of world content with independent projection
-        // UI 使用独立投影渲染在世界内容之上
-        // Only in preview mode - in editor mode, UI is rendered in world space above
-        // 仅在预览模式 - 在编辑器模式，UI 在上面的世界空间渲染
-        if (this.previewMode) {
-            this.renderScreenSpaceUI();
-        }
     }
 
     /**
-     * Render screen space UI with fixed orthographic projection.
-     * 使用固定正交投影渲染屏幕空间 UI。
-     *
-     * Screen space UI is rendered with an independent orthographic projection
-     * based on the UI canvas size, not affected by the world camera.
-     * 屏幕空间 UI 使用基于 UI 画布尺寸的独立正交投影渲染，不受世界相机影响。
+     * Render screen space content (UI, ScreenOverlay, Modal).
+     * 渲染屏幕空间内容（UI、屏幕覆盖层、模态层）。
      */
-    private renderScreenSpaceUI(): void {
-        if (!this.uiRenderDataProvider) {
-            return;
-        }
-
-        // Get all UI render data (now only screen space)
-        // 获取所有 UI 渲染数据（现在只有屏幕空间）
-        const uiRenderData = this.uiRenderDataProvider.getRenderData();
-        if (uiRenderData.length === 0) {
-            return;
-        }
+    private renderScreenSpacePass(
+        screenSpaceItems: Array<{ sortKey: number; sprites: SpriteRenderData[] }>
+    ): void {
+        // Sort by sortKey
+        // 按 sortKey 排序
+        screenSpaceItems.sort((a, b) => a.sortKey - b.sortKey);
 
         // Switch to screen space projection
         // 切换到屏幕空间投影
-        // Use UI canvas size for the orthographic projection
-        // 使用 UI 画布尺寸进行正交投影
         const canvasWidth = this.uiCanvasWidth > 0 ? this.uiCanvasWidth : 1920;
         const canvasHeight = this.uiCanvasHeight > 0 ? this.uiCanvasHeight : 1080;
 
-        // Save current camera state and switch to screen space mode
-        // 保存当前相机状态并切换到屏幕空间模式
         this.bridge.pushScreenSpaceMode(canvasWidth, canvasHeight);
 
         // Clear batcher for screen space content
+        // 清空批处理器用于屏幕空间内容
         this.batcher.clear();
 
-        // Collect screen space UI render items
-        const screenSpaceItems: Array<{ sortingOrder: number; sprites: SpriteRenderData[] }> = [];
-
-        for (const data of uiRenderData) {
-            const uiSprites = this.convertProviderDataToSprites(data);
-            if (uiSprites.length > 0) {
-                screenSpaceItems.push({ sortingOrder: data.sortingOrder, sprites: uiSprites });
-            }
-        }
-
-        // Sort by sortingOrder
-        screenSpaceItems.sort((a, b) => a.sortingOrder - b.sortingOrder);
-
-        // Submit screen space UI sprites
+        // Submit screen space sprites
+        // 提交屏幕空间 sprites
         for (const item of screenSpaceItems) {
             for (const sprite of item.sprites) {
                 this.batcher.addSprite(sprite);
@@ -529,10 +557,11 @@ export class EngineRenderSystem extends EntitySystem {
      * 将提供者渲染数据转换为 Sprite 渲染数据数组。
      */
     private convertProviderDataToSprites(data: ProviderRenderData): SpriteRenderData[] {
-        // Get texture ID - load from path if needed
+        // Get texture ID - load from GUID if needed
+        // 获取纹理 ID - 如果需要从 GUID 加载
         let textureId = data.textureIds[0] || 0;
-        if (textureId === 0 && data.texturePath) {
-            textureId = this.bridge.getOrLoadTextureByPath(data.texturePath);
+        if (textureId === 0 && data.textureGuid) {
+            textureId = this.bridge.getOrLoadTextureByPath(this.resolveAssetPath(data.textureGuid));
         }
 
         const sprites: SpriteRenderData[] = [];
@@ -1208,5 +1237,18 @@ export class EngineRenderSystem extends EntitySystem {
      */
     getAssetPathResolver(): AssetPathResolverFn | null {
         return this.assetPathResolver;
+    }
+
+    /**
+     * Resolve asset GUID or path to actual file path.
+     * 将资产 GUID 或路径解析为实际文件路径。
+     *
+     * @param guidOrPath - Asset GUID or path | 资产 GUID 或路径
+     * @returns Resolved path or original value | 解析后的路径或原值
+     */
+    private resolveAssetPath(guidOrPath: string): string {
+        return this.assetPathResolver
+            ? this.assetPathResolver(guidOrPath)
+            : guidOrPath;
     }
 }

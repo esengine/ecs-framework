@@ -31,9 +31,11 @@ import {
 import type { IDialogExtended } from './services/TauriDialogService';
 import { GlobalBlackboardService } from '@esengine/behavior-tree';
 import { ServiceRegistry, PluginInstaller, useDialogStore } from './app/managers';
+import { useEditorStore } from './stores';
 import { StartupPage } from './components/StartupPage';
 import { ProjectCreationWizard } from './components/ProjectCreationWizard';
 import { SceneHierarchy } from './components/SceneHierarchy';
+import { ContentBrowser } from './components/ContentBrowser';
 import { Inspector } from './components/inspectors/Inspector';
 import { AssetBrowser } from './components/AssetBrowser';
 import { Viewport } from './components/Viewport';
@@ -49,7 +51,7 @@ import { ForumPanel } from './components/forum';
 import { ToastProvider, useToast } from './components/Toast';
 import { TitleBar } from './components/TitleBar';
 import { MainToolbar } from './components/MainToolbar';
-import { FlexLayoutDockContainer, FlexDockPanel } from './components/FlexLayoutDockContainer';
+import { FlexLayoutDockContainer, FlexDockPanel, type FlexLayoutDockContainerHandle } from './components/FlexLayoutDockContainer';
 import { StatusBar } from './components/StatusBar';
 import { TauriAPI } from './api/tauri';
 import { SettingsService } from './services/SettingsService';
@@ -58,6 +60,7 @@ import { EngineService } from './services/EngineService';
 import { CompilerConfigDialog } from './components/CompilerConfigDialog';
 import { checkForUpdatesOnStartup } from './utils/updater';
 import { useLocale } from './hooks/useLocale';
+import { useStoreSubscriptions } from './hooks/useStoreSubscriptions';
 import { en, zh, es } from './locales';
 import type { Locale } from '@esengine/editor-core';
 import { Loader2 } from 'lucide-react';
@@ -83,41 +86,82 @@ const logger = createLogger('App');
 
 function App() {
     const initRef = useRef(false);
+    const layoutContainerRef = useRef<FlexLayoutDockContainerHandle>(null);
     const [pluginLoader] = useState(() => new PluginLoader());
     const { showToast, hideToast } = useToast();
+
+    // ===== 本地初始化状态（只用于初始化阶段）| Local init state (only for initialization) =====
     const [initialized, setInitialized] = useState(false);
-    const [projectLoaded, setProjectLoaded] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-    const [loadingMessage, setLoadingMessage] = useState('');
-    const [currentProjectPath, setCurrentProjectPath] = useState<string | null>(null);
-    const [availableScenes, setAvailableScenes] = useState<string[]>([]);
-    const [pluginManager, setPluginManager] = useState<PluginManager | null>(null);
-    const [entityStore, setEntityStore] = useState<EntityStoreService | null>(null);
-    const [messageHub, setMessageHub] = useState<MessageHub | null>(null);
-    const [inspectorRegistry, setInspectorRegistry] = useState<InspectorRegistry | null>(null);
-    const [logService, setLogService] = useState<LogService | null>(null);
-    const [uiRegistry, setUiRegistry] = useState<UIRegistry | null>(null);
-    const [settingsRegistry, setSettingsRegistry] = useState<SettingsRegistry | null>(null);
-    const [sceneManager, setSceneManager] = useState<SceneManagerService | null>(null);
-    const [notification, setNotification] = useState<INotification | null>(null);
-    const [dialog, setDialog] = useState<IDialogExtended | null>(null);
-    const [buildService, setBuildService] = useState<BuildService | null>(null);
-    const [projectServiceState, setProjectServiceState] = useState<ProjectService | null>(null);
+
+    // ===== 从 EditorStore 获取状态 | Get state from EditorStore =====
+    const {
+        projectLoaded, setProjectLoaded,
+        currentProjectPath, setCurrentProjectPath,
+        availableScenes, setAvailableScenes,
+        isLoading, setIsLoading,
+        loadingMessage,
+        panels, setPanels,
+        activeDynamicPanels, addDynamicPanel, removeDynamicPanel, clearDynamicPanels,
+        dynamicPanelTitles, setDynamicPanelTitle,
+        activePanelId, setActivePanelId,
+        pluginUpdateTrigger, triggerPluginUpdate,
+        isRemoteConnected, setIsRemoteConnected,
+        isContentBrowserDocked, setIsContentBrowserDocked,
+        isEditorFullscreen, setIsEditorFullscreen,
+        status, setStatus,
+        showProjectWizard, setShowProjectWizard,
+        settingsInitialCategory, setSettingsInitialCategory,
+        compilerDialog, openCompilerDialog, closeCompilerDialog,
+    } = useEditorStore();
+
+    // ===== 服务实例用 useRef（不触发重渲染）| Service instances use useRef (no re-renders) =====
+    const pluginManagerRef = useRef<PluginManager | null>(null);
+    const entityStoreRef = useRef<EntityStoreService | null>(null);
+    const messageHubRef = useRef<MessageHub | null>(null);
+    const inspectorRegistryRef = useRef<InspectorRegistry | null>(null);
+    const logServiceRef = useRef<LogService | null>(null);
+    const uiRegistryRef = useRef<UIRegistry | null>(null);
+    const settingsRegistryRef = useRef<SettingsRegistry | null>(null);
+    const sceneManagerRef = useRef<SceneManagerService | null>(null);
+    const notificationRef = useRef<INotification | null>(null);
+    const dialogRef = useRef<IDialogExtended | null>(null);
+    const buildServiceRef = useRef<BuildService | null>(null);
+    const projectServiceRef = useRef<ProjectService | null>(null);
+
+    // 兼容层：提供 getter 访问服务 | Compatibility layer: provide getter access to services
+    const pluginManager = pluginManagerRef.current;
+    const entityStore = entityStoreRef.current;
+    const messageHub = messageHubRef.current;
+    const inspectorRegistry = inspectorRegistryRef.current;
+    const logService = logServiceRef.current;
+    const uiRegistry = uiRegistryRef.current;
+    const settingsRegistry = settingsRegistryRef.current;
+    const sceneManager = sceneManagerRef.current;
+    const notification = notificationRef.current;
+    const dialog = dialogRef.current;
+    const buildService = buildServiceRef.current;
+    const projectServiceState = projectServiceRef.current;
+
     const [commandManager] = useState(() => new CommandManager());
     const { t, locale, changeLocale } = useLocale();
 
+    // 初始化 Store 订阅（集中管理 MessageHub 订阅）
+    // Initialize store subscriptions (centrally manage MessageHub subscriptions)
+    useStoreSubscriptions({
+        messageHub: messageHubRef.current,
+        entityStore: entityStoreRef.current,
+        sceneManager: sceneManagerRef.current,
+        enabled: initialized,
+    });
+
     // 同步 locale 到 TauriDialogService
     useEffect(() => {
-        if (dialog) {
-            dialog.setLocale(locale);
+        if (dialogRef.current) {
+            dialogRef.current.setLocale(locale);
         }
-    }, [locale, dialog]);
-    const [status, setStatus] = useState(t('header.status.initializing'));
-    const [panels, setPanels] = useState<FlexDockPanel[]>([]);
-    const [pluginUpdateTrigger, setPluginUpdateTrigger] = useState(0);
-    const [isRemoteConnected, setIsRemoteConnected] = useState(false);
-    const [showProjectWizard, setShowProjectWizard] = useState(false);
+    }, [locale]);
 
+    // ===== 从 DialogStore 获取对话框状态 | Get dialog state from DialogStore =====
     const {
         showProfiler, setShowProfiler,
         showAdvancedProfiler, setShowAdvancedProfiler,
@@ -129,16 +173,6 @@ function App() {
         errorDialog, setErrorDialog,
         confirmDialog, setConfirmDialog
     } = useDialogStore();
-    const [settingsInitialCategory, setSettingsInitialCategory] = useState<string | undefined>(undefined);
-    const [activeDynamicPanels, setActiveDynamicPanels] = useState<string[]>([]);
-    const [activePanelId, setActivePanelId] = useState<string | undefined>(undefined);
-    const [dynamicPanelTitles, setDynamicPanelTitles] = useState<Map<string, string>>(new Map());
-    const [isEditorFullscreen, setIsEditorFullscreen] = useState(false);
-    const [compilerDialog, setCompilerDialog] = useState<{
-        isOpen: boolean;
-        compilerId: string;
-        currentFileName?: string;
-    }>({ isOpen: false, compilerId: '' });
 
     useEffect(() => {
         // 禁用默认右键菜单
@@ -152,6 +186,35 @@ function App() {
             document.removeEventListener('contextmenu', handleContextMenu);
         };
     }, []);
+
+    // Global keyboard shortcuts for undo/redo | 全局撤销/重做快捷键
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Skip if user is typing in an input | 如果用户正在输入则跳过
+            const target = e.target as HTMLElement;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+                return;
+            }
+
+            // Ctrl+Z: Undo | 撤销
+            if (e.ctrlKey && !e.shiftKey && e.key === 'z') {
+                e.preventDefault();
+                if (commandManager.canUndo()) {
+                    commandManager.undo();
+                }
+            }
+            // Ctrl+Y or Ctrl+Shift+Z: Redo | 重做
+            else if ((e.ctrlKey && e.key === 'y') || (e.ctrlKey && e.shiftKey && e.key === 'z')) {
+                e.preventDefault();
+                if (commandManager.canRedo()) {
+                    commandManager.redo();
+                }
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [commandManager]);
 
     // 快捷键监听
     useEffect(() => {
@@ -181,12 +244,23 @@ function App() {
                         e.preventDefault();
                         if (sceneManager) {
                             try {
-                                await sceneManager.saveScene();
-                                const sceneState = sceneManager.getSceneState();
-                                showToast(t('scene.savedSuccess', { name: sceneState.sceneName }), 'success');
+                                // 检查是否在预制体编辑模式 | Check if in prefab edit mode
+                                if (sceneManager.isPrefabEditMode()) {
+                                    await sceneManager.savePrefab();
+                                    const prefabState = sceneManager.getPrefabEditModeState();
+                                    showToast(t('editMode.prefab.savedSuccess', { name: prefabState?.prefabName ?? 'Prefab' }), 'success');
+                                } else {
+                                    await sceneManager.saveScene();
+                                    const sceneState = sceneManager.getSceneState();
+                                    showToast(t('scene.savedSuccess', { name: sceneState.sceneName }), 'success');
+                                }
                             } catch (error) {
-                                console.error('Failed to save scene:', error);
-                                showToast(t('scene.saveFailed'), 'error');
+                                console.error('Failed to save:', error);
+                                if (sceneManager.isPrefabEditMode()) {
+                                    showToast(t('editMode.prefab.saveFailed'), 'error');
+                                } else {
+                                    showToast(t('scene.saveFailed'), 'error');
+                                }
                             }
                         }
                         break;
@@ -208,29 +282,31 @@ function App() {
         showBuildSettings, showSettings, showAbout, showPluginGenerator,
         showPortManager, showAdvancedProfiler, errorDialog, confirmDialog]);
 
+    // 插件和通知订阅 | Plugin and notification subscriptions
     useEffect(() => {
-        if (messageHub) {
-            const unsubscribeEnabled = messageHub.subscribe('plugin:enabled', () => {
-                setPluginUpdateTrigger((prev) => prev + 1);
-            });
+        if (!initialized || !messageHubRef.current) return;
+        const hub = messageHubRef.current;
 
-            const unsubscribeDisabled = messageHub.subscribe('plugin:disabled', () => {
-                setPluginUpdateTrigger((prev) => prev + 1);
-            });
+        const unsubscribeEnabled = hub.subscribe('plugin:enabled', () => {
+            triggerPluginUpdate();
+        });
 
-            const unsubscribeNotification = messageHub.subscribe('notification:show', (notification: { message: string; type: 'success' | 'error' | 'warning' | 'info'; timestamp: number }) => {
-                if (notification && notification.message) {
-                    showToast(notification.message, notification.type);
-                }
-            });
+        const unsubscribeDisabled = hub.subscribe('plugin:disabled', () => {
+            triggerPluginUpdate();
+        });
 
-            return () => {
-                unsubscribeEnabled();
-                unsubscribeDisabled();
-                unsubscribeNotification();
-            };
-        }
-    }, [messageHub, showToast]);
+        const unsubscribeNotification = hub.subscribe('notification:show', (notification: { message: string; type: 'success' | 'error' | 'warning' | 'info'; timestamp: number }) => {
+            if (notification && notification.message) {
+                showToast(notification.message, notification.type);
+            }
+        });
+
+        return () => {
+            unsubscribeEnabled();
+            unsubscribeDisabled();
+            unsubscribeNotification();
+        };
+    }, [initialized, triggerPluginUpdate, showToast]);
 
     // 监听远程连接状态
     // Monitor remote connection status
@@ -307,18 +383,21 @@ function App() {
                     }
                 });
 
+                // 设置服务引用（不触发重渲染）| Set service refs (no re-renders)
+                pluginManagerRef.current = services.pluginManager;
+                entityStoreRef.current = services.entityStore;
+                messageHubRef.current = services.messageHub;
+                inspectorRegistryRef.current = services.inspectorRegistry;
+                logServiceRef.current = services.logService;
+                uiRegistryRef.current = services.uiRegistry;
+                settingsRegistryRef.current = services.settingsRegistry;
+                sceneManagerRef.current = services.sceneManager;
+                notificationRef.current = services.notification;
+                dialogRef.current = services.dialog as IDialogExtended;
+                buildServiceRef.current = services.buildService;
+
+                // 设置初始化完成（触发一次重渲染）| Set initialized (triggers one re-render)
                 setInitialized(true);
-                setPluginManager(services.pluginManager);
-                setEntityStore(services.entityStore);
-                setMessageHub(services.messageHub);
-                setInspectorRegistry(services.inspectorRegistry);
-                setLogService(services.logService);
-                setUiRegistry(services.uiRegistry);
-                setSettingsRegistry(services.settingsRegistry);
-                setSceneManager(services.sceneManager);
-                setNotification(services.notification);
-                setDialog(services.dialog as IDialogExtended);
-                setBuildService(services.buildService);
                 setStatus(t('header.status.ready'));
 
                 // Check for updates on startup (after 3 seconds)
@@ -332,66 +411,81 @@ function App() {
         initializeEditor();
     }, []);
 
+    // 初始化后订阅消息 | Subscribe to messages after initialization
     useEffect(() => {
-        if (!messageHub) return;
+        if (!initialized || !messageHubRef.current) return;
+        const hub = messageHubRef.current;
 
-        const unsubscribe = messageHub.subscribe('dynamic-panel:open', (data: any) => {
+        const unsubscribe = hub.subscribe('dynamic-panel:open', (data: any) => {
             const { panelId, title } = data;
             logger.info('Opening dynamic panel:', panelId, 'with title:', title);
-            setActiveDynamicPanels((prev) => {
-                const newPanels = prev.includes(panelId) ? prev : [...prev, panelId];
-                return newPanels;
-            });
+            addDynamicPanel(panelId, title);
             setActivePanelId(panelId);
-
-            // 更新动态面板标题
-            if (title) {
-                setDynamicPanelTitles((prev) => {
-                    const newTitles = new Map(prev);
-                    newTitles.set(panelId, title);
-                    return newTitles;
-                });
-            }
         });
 
         return () => unsubscribe?.();
-    }, [messageHub]);
+    }, [initialized, addDynamicPanel, setActivePanelId]);
 
     useEffect(() => {
-        if (!messageHub) return;
+        if (!initialized || !messageHubRef.current) return;
+        const hub = messageHubRef.current;
 
-        const unsubscribe = messageHub.subscribe('editor:fullscreen', (data: any) => {
+        const unsubscribe = hub.subscribe('editor:fullscreen', (data: any) => {
             const { fullscreen } = data;
             logger.info('Editor fullscreen state changed:', fullscreen);
             setIsEditorFullscreen(fullscreen);
         });
 
         return () => unsubscribe?.();
-    }, [messageHub]);
+    }, [initialized, setIsEditorFullscreen]);
 
     useEffect(() => {
-        if (!messageHub) return;
+        if (!initialized || !messageHubRef.current) return;
+        const hub = messageHubRef.current;
 
-        const unsubscribe = messageHub.subscribe('compiler:open-dialog', (data: {
+        const unsubscribe = hub.subscribe('compiler:open-dialog', (data: {
             compilerId: string;
             currentFileName?: string;
             projectPath?: string;
         }) => {
             logger.info('Opening compiler dialog:', data.compilerId);
-            setCompilerDialog({
-                isOpen: true,
-                compilerId: data.compilerId,
-                currentFileName: data.currentFileName
-            });
+            openCompilerDialog(data.compilerId, data.currentFileName);
         });
 
         return () => unsubscribe?.();
-    }, [messageHub]);
+    }, [initialized, openCompilerDialog]);
+
+    // 注册引擎快照请求处理器（用于预制体编辑模式）
+    // Register engine snapshot request handlers (for prefab edit mode)
+    useEffect(() => {
+        if (!initialized || !messageHubRef.current) return;
+        const hub = messageHubRef.current;
+
+        const unsubscribeSave = hub.onRequest<void, boolean>(
+            'engine:saveSceneSnapshot',
+            async () => {
+                const engineService = EngineService.getInstance();
+                return engineService.saveSceneSnapshot();
+            }
+        );
+
+        const unsubscribeRestore = hub.onRequest<void, boolean>(
+            'engine:restoreSceneSnapshot',
+            async () => {
+                const engineService = EngineService.getInstance();
+                return await engineService.restoreSceneSnapshot();
+            }
+        );
+
+        return () => {
+            unsubscribeSave?.();
+            unsubscribeRestore?.();
+        };
+    }, [initialized]);
 
     const handleOpenRecentProject = async (projectPath: string) => {
         try {
-            setIsLoading(true);
-            setLoadingMessage(t('loading.step1'));
+            setIsLoading(true, t('loading.step1'));
 
             const projectService = Core.services.resolve(ProjectService);
 
@@ -401,7 +495,7 @@ function App() {
                 return;
             }
 
-            setProjectServiceState(projectService);
+            projectServiceRef.current = projectService;
             await projectService.openProject(projectPath);
 
             // 注意：插件配置会在引擎初始化后加载和激活
@@ -438,7 +532,7 @@ function App() {
             setProjectLoaded(true);
 
             // 等待引擎初始化完成（Viewport 渲染后会触发引擎初始化）
-            setLoadingMessage(t('loading.step2'));
+            setIsLoading(true, t('loading.step2'));
             const engineService = EngineService.getInstance();
 
             // 等待引擎初始化（最多等待 30 秒，因为需要等待 Viewport 渲染）
@@ -449,12 +543,12 @@ function App() {
 
             // 加载项目插件配置并激活插件（在引擎初始化后、模块系统初始化前）
             // Load project plugin config and activate plugins (after engine init, before module system init)
-            if (pluginManager) {
+            if (pluginManagerRef.current) {
                 const pluginSettings = projectService.getPluginSettings();
                 console.log('[App] Plugin settings from project:', pluginSettings);
                 if (pluginSettings && pluginSettings.enabledPlugins.length > 0) {
                     console.log('[App] Loading plugin config:', pluginSettings.enabledPlugins);
-                    await pluginManager.loadConfig({ enabledPlugins: pluginSettings.enabledPlugins });
+                    await pluginManagerRef.current.loadConfig({ enabledPlugins: pluginSettings.enabledPlugins });
                 } else {
                     console.log('[App] No plugin settings found in project config');
                 }
@@ -470,16 +564,16 @@ function App() {
 
             setStatus(t('header.status.projectOpened'));
 
-            setLoadingMessage(t('loading.step3'));
+            setIsLoading(true, t('loading.step3'));
 
             const sceneManagerService = Core.services.resolve(SceneManagerService);
             if (sceneManagerService) {
                 await sceneManagerService.newScene();
             }
 
-            if (pluginManager) {
-                setLoadingMessage(t('loading.loadingPlugins'));
-                await pluginLoader.loadProjectPlugins(projectPath, pluginManager);
+            if (pluginManagerRef.current) {
+                setIsLoading(true, t('loading.loadingPlugins'));
+                await pluginLoader.loadProjectPlugins(projectPath, pluginManagerRef.current);
             }
 
             setIsLoading(false);
@@ -517,8 +611,7 @@ function App() {
         const fullProjectPath = `${projectPath}${sep}${projectName}`;
 
         try {
-            setIsLoading(true);
-            setLoadingMessage(t('project.creating'));
+            setIsLoading(true, t('project.creating'));
 
             const projectService = Core.services.resolve(ProjectService);
             if (!projectService) {
@@ -533,7 +626,7 @@ function App() {
 
             await projectService.createProject(fullProjectPath);
 
-            setLoadingMessage(t('project.createdOpening'));
+            setIsLoading(true, t('project.createdOpening'));
 
             await handleOpenRecentProject(fullProjectPath);
         } catch (error) {
@@ -550,8 +643,7 @@ function App() {
                     cancelText: t('common.cancel'),
                     onConfirm: () => {
                         setConfirmDialog(null);
-                        setIsLoading(true);
-                        setLoadingMessage(t('project.opening'));
+                        setIsLoading(true, t('project.opening'));
                         handleOpenRecentProject(fullProjectPath).catch((err) => {
                             console.error('Failed to open project:', err);
                             setIsLoading(false);
@@ -701,13 +793,13 @@ function App() {
     const handleLocaleChange = (newLocale: Locale) => {
         changeLocale(newLocale);
 
-        // 通知所有已加载的插件更新语言
-        if (pluginManager) {
-            pluginManager.setLocale(newLocale);
+        // 通知所有已加载的插件更新语言 | Notify all loaded plugins to update locale
+        if (pluginManagerRef.current) {
+            pluginManagerRef.current.setLocale(newLocale);
 
-            // 通过 MessageHub 通知需要重新获取节点模板
-            if (messageHub) {
-                messageHub.publish('locale:changed', { locale: newLocale });
+            // 通过 MessageHub 通知需要重新获取节点模板 | Notify via MessageHub to refetch node templates
+            if (messageHubRef.current) {
+                messageHubRef.current.publish('locale:changed', { locale: newLocale });
             }
         }
     };
@@ -729,30 +821,30 @@ function App() {
     };
 
     const handleReloadPlugins = async () => {
-        if (currentProjectPath && pluginManager) {
+        if (currentProjectPath && pluginManagerRef.current) {
             try {
-                // 1. 关闭所有动态面板
-                setActiveDynamicPanels([]);
+                // 1. 关闭所有动态面板 | Close all dynamic panels
+                clearDynamicPanels();
 
-                // 2. 清空当前面板列表（强制卸载插件面板组件）
+                // 2. 清空当前面板列表（强制卸载插件面板组件）| Clear panel list (force unmount plugin panels)
                 setPanels((prev) => prev.filter((p) =>
                     ['scene-hierarchy', 'inspector', 'console', 'asset-browser'].includes(p.id)
                 ));
 
-                // 3. 等待React完成卸载
+                // 3. 等待React完成卸载 | Wait for React to unmount
                 await new Promise((resolve) => setTimeout(resolve, 200));
 
-                // 4. 卸载所有项目插件（清理UIRegistry、调用uninstall）
-                await pluginLoader.unloadProjectPlugins(pluginManager);
+                // 4. 卸载所有项目插件（清理UIRegistry、调用uninstall）| Unload all project plugins
+                await pluginLoader.unloadProjectPlugins(pluginManagerRef.current);
 
-                // 5. 等待卸载完成
+                // 5. 等待卸载完成 | Wait for unload
                 await new Promise((resolve) => setTimeout(resolve, 100));
 
-                // 6. 重新加载插件
-                await pluginLoader.loadProjectPlugins(currentProjectPath, pluginManager);
+                // 6. 重新加载插件 | Reload plugins
+                await pluginLoader.loadProjectPlugins(currentProjectPath, pluginManagerRef.current);
 
-                // 7. 触发面板重新渲染
-                setPluginUpdateTrigger((prev) => prev + 1);
+                // 7. 触发面板重新渲染 | Trigger panel re-render
+                triggerPluginUpdate();
 
                 showToast(t('plugin.reloadedSuccess'), 'success');
             } catch (error) {
@@ -762,93 +854,152 @@ function App() {
         }
     };
 
-    useEffect(() => {
-        if (projectLoaded && entityStore && messageHub && logService && uiRegistry && pluginManager) {
-            const corePanels: FlexDockPanel[] = [
-                {
-                    id: 'scene-hierarchy',
-                    title: t('panel.sceneHierarchy'),
-                    content: <SceneHierarchy entityStore={entityStore} messageHub={messageHub} commandManager={commandManager} />,
-                    closable: false
-                },
-                {
-                    id: 'viewport',
-                    title: t('panel.viewport'),
-                    content: <Viewport locale={locale} messageHub={messageHub} />,
-                    closable: false
-                },
-                {
-                    id: 'inspector',
-                    title: t('panel.inspector'),
-                    content: <Inspector entityStore={entityStore} messageHub={messageHub} inspectorRegistry={inspectorRegistry!} projectPath={currentProjectPath} commandManager={commandManager} />,
-                    closable: false
-                },
-                {
-                    id: 'forum',
-                    title: t('panel.forum'),
-                    content: <ForumPanel />,
-                    closable: true
-                }
-            ];
+    // ===== 面板构建（拆分依赖减少重建）| Panel building (split deps to reduce rebuilds) =====
+    // 使用 ref 存储面板构建函数，避免频繁重建
+    // Use ref to store panel builder function to avoid frequent rebuilds
+    const buildPanelsRef = useRef<() => void>(() => {});
 
-            // 获取启用的插件面板
-            const pluginPanels: FlexDockPanel[] = uiRegistry.getAllPanels()
-                .filter((panelDesc) => {
-                    if (!panelDesc.component) {
-                        return false;
-                    }
-                    if (panelDesc.isDynamic) {
-                        return false;
-                    }
-                    return true;
-                })
-                .map((panelDesc) => {
-                    const Component = panelDesc.component;
-                    // 使用 titleKey 翻译，回退到 title
-                    // Use titleKey for translation, fallback to title
-                    const title = panelDesc.titleKey ? t(panelDesc.titleKey) : panelDesc.title;
-                    return {
-                        id: panelDesc.id,
-                        title,
-                        content: <Component key={`${panelDesc.id}-${pluginUpdateTrigger}`} projectPath={currentProjectPath} />,
-                        closable: panelDesc.closable ?? true
-                    };
-                });
+    // 更新面板构建函数（不触发重渲染）| Update panel builder (no re-render)
+    buildPanelsRef.current = () => {
+        if (!projectLoaded || !initialized) return;
 
-            // 添加激活的动态面板
-            const dynamicPanels: FlexDockPanel[] = activeDynamicPanels
-                .filter((panelId) => {
-                    const panelDesc = uiRegistry.getPanel(panelId);
-                    return panelDesc && (panelDesc.component || panelDesc.render);
-                })
-                .map((panelId) => {
-                    const panelDesc = uiRegistry.getPanel(panelId)!;
-                    // 优先使用动态标题，否则使用默认标题
-                    // Prefer dynamic title, fallback to default title
-                    const customTitle = dynamicPanelTitles.get(panelId);
-                    // 使用 titleKey 翻译，回退到 title
-                    const defaultTitle = panelDesc.titleKey ? t(panelDesc.titleKey) : panelDesc.title;
+        const hub = messageHubRef.current;
+        const store = entityStoreRef.current;
+        const registry = uiRegistryRef.current;
+        const inspReg = inspectorRegistryRef.current;
 
-                    // 支持 component 或 render 两种方式
-                    let content: React.ReactNode;
-                    if (panelDesc.component) {
-                        const Component = panelDesc.component;
-                        content = <Component projectPath={currentProjectPath} locale={locale} />;
-                    } else if (panelDesc.render) {
-                        content = panelDesc.render();
-                    }
+        if (!hub || !store || !registry) return;
 
-                    return {
-                        id: panelDesc.id,
-                        title: customTitle || defaultTitle,
-                        content,
-                        closable: panelDesc.closable ?? true
-                    };
-                });
+        const corePanels: FlexDockPanel[] = [
+            {
+                id: 'scene-hierarchy',
+                title: t('panel.sceneHierarchy'),
+                content: <SceneHierarchy entityStore={store} messageHub={hub} commandManager={commandManager} />,
+                closable: false,
+                layout: { position: 'right-top' }
+            },
+            {
+                id: 'viewport',
+                title: t('panel.viewport'),
+                content: <Viewport locale={locale} messageHub={hub} commandManager={commandManager} />,
+                closable: false,
+                layout: { position: 'center' }
+            },
+            {
+                id: 'inspector',
+                title: t('panel.inspector'),
+                content: <Inspector entityStore={store} messageHub={hub} inspectorRegistry={inspReg!} projectPath={currentProjectPath} commandManager={commandManager} />,
+                closable: false,
+                layout: { position: 'right-bottom' }
+            },
+            {
+                id: 'forum',
+                title: t('panel.forum'),
+                content: <ForumPanel />,
+                closable: true,
+                layout: { position: 'center' }
+            }
+        ];
 
-            setPanels([...corePanels, ...pluginPanels, ...dynamicPanels]);
+        // 如果内容管理器已停靠，添加到面板 | If content browser is docked, add to panels
+        if (isContentBrowserDocked) {
+            corePanels.push({
+                id: 'content-browser',
+                title: t('panel.contentBrowser'),
+                content: (
+                    <ContentBrowser
+                        projectPath={currentProjectPath}
+                        locale={locale}
+                        onOpenScene={handleOpenSceneByPath}
+                        isDrawer={false}
+                        onDockInLayout={() => setIsContentBrowserDocked(false)}
+                    />
+                ),
+                closable: true,
+                layout: { position: 'bottom', weight: 20, requiresSeparateTabset: true }
+            });
         }
-    }, [projectLoaded, entityStore, messageHub, logService, uiRegistry, pluginManager, locale, currentProjectPath, t, pluginUpdateTrigger, handleOpenSceneByPath, activeDynamicPanels, dynamicPanelTitles]);
+
+        // 获取启用的插件面板 | Get enabled plugin panels
+        const pluginPanels: FlexDockPanel[] = registry.getAllPanels()
+            .filter((panelDesc) => panelDesc.component && !panelDesc.isDynamic)
+            .map((panelDesc) => {
+                const Component = panelDesc.component!;
+                const title = panelDesc.titleKey ? t(panelDesc.titleKey) : panelDesc.title;
+                return {
+                    id: panelDesc.id,
+                    title,
+                    content: <Component key={`${panelDesc.id}-${pluginUpdateTrigger}`} projectPath={currentProjectPath} />,
+                    closable: panelDesc.closable ?? true
+                };
+            });
+
+        // 添加激活的动态面板 | Add active dynamic panels
+        const dynamicPanels: FlexDockPanel[] = activeDynamicPanels
+            .filter((panelId) => {
+                const panelDesc = registry.getPanel(panelId);
+                return panelDesc && (panelDesc.component || panelDesc.render);
+            })
+            .map((panelId) => {
+                const panelDesc = registry.getPanel(panelId)!;
+                const customTitle = dynamicPanelTitles.get(panelId);
+                const defaultTitle = panelDesc.titleKey ? t(panelDesc.titleKey) : panelDesc.title;
+
+                let content: React.ReactNode;
+                if (panelDesc.component) {
+                    const Component = panelDesc.component;
+                    content = <Component projectPath={currentProjectPath} locale={locale} />;
+                } else if (panelDesc.render) {
+                    content = panelDesc.render();
+                }
+
+                return {
+                    id: panelDesc.id,
+                    title: customTitle || defaultTitle,
+                    content,
+                    closable: panelDesc.closable ?? true
+                };
+            });
+
+        setPanels([...corePanels, ...pluginPanels, ...dynamicPanels]);
+    };
+
+    // Effect 1: 项目加载后首次构建面板 | Build panels after project loads
+    useEffect(() => {
+        if (projectLoaded && initialized) {
+            buildPanelsRef.current();
+        }
+    }, [projectLoaded, initialized]);
+
+    // Effect 2: 插件更新时重建 | Rebuild on plugin update
+    useEffect(() => {
+        if (projectLoaded && initialized && pluginUpdateTrigger > 0) {
+            buildPanelsRef.current();
+        }
+    }, [projectLoaded, initialized, pluginUpdateTrigger]);
+
+    // Effect 3: 动态面板变化时重建 | Rebuild on dynamic panel change
+    useEffect(() => {
+        if (projectLoaded && initialized) {
+            buildPanelsRef.current();
+        }
+    }, [projectLoaded, initialized, activeDynamicPanels, isContentBrowserDocked]);
+
+    // Effect 4: 语言变化时更新面板标题（不重建组件）| Update panel titles on locale change (don't rebuild components)
+    useEffect(() => {
+        if (projectLoaded && initialized) {
+            // 只更新标题，不重建组件 | Only update titles, don't rebuild components
+            setPanels((prev) => prev.map(panel => ({
+                ...panel,
+                title: panel.id === 'scene-hierarchy' ? t('panel.sceneHierarchy') :
+                       panel.id === 'viewport' ? t('panel.viewport') :
+                       panel.id === 'inspector' ? t('panel.inspector') :
+                       panel.id === 'forum' ? t('panel.forum') :
+                       panel.id === 'content-browser' ? t('panel.contentBrowser') :
+                       panel.title
+            })));
+        }
+    }, [locale, t, projectLoaded, initialized, setPanels]);
 
 
     if (!initialized) {
@@ -985,7 +1136,7 @@ function App() {
                 compilerId={compilerDialog.compilerId}
                 projectPath={currentProjectPath}
                 currentFileName={compilerDialog.currentFileName}
-                onClose={() => setCompilerDialog({ isOpen: false, compilerId: '' })}
+                onClose={closeCompilerDialog}
                 onCompileComplete={(result) => {
                     if (result.success) {
                         showToast(result.message, 'success');
@@ -997,12 +1148,18 @@ function App() {
 
             <div className="editor-content">
                 <FlexLayoutDockContainer
+                    ref={layoutContainerRef}
                     panels={panels}
                     activePanelId={activePanelId}
-                    messageHub={messageHub}
+                    messageHub={messageHubRef.current}
                     onPanelClose={(panelId) => {
                         logger.info('Panel closed:', panelId);
-                        setActiveDynamicPanels((prev) => prev.filter((id) => id !== panelId));
+                        // 如果关闭的是内容管理器，重置停靠状态
+                        // If closing content browser, reset dock state
+                        if (panelId === 'content-browser') {
+                            setIsContentBrowserDocked(false);
+                        }
+                        removeDynamicPanel(panelId);
                     }}
                 />
             </div>
@@ -1015,6 +1172,8 @@ function App() {
                 locale={locale}
                 projectPath={currentProjectPath}
                 onOpenScene={handleOpenSceneByPath}
+                onDockContentBrowser={() => setIsContentBrowserDocked(true)}
+                onResetLayout={() => layoutContainerRef.current?.resetLayout()}
             />
 
 

@@ -701,11 +701,13 @@
 .build-progress-dialog {
     display: flex;
     flex-direction: column;
-    width: 360px;
+    width: 400px;
+    max-width: 90vw;
     background: #2a2a2a;
     border: 1px solid #3a3a3a;
-    border-radius: 4px;
+    border-radius: 6px;
     overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
 .build-progress-header {
@@ -747,14 +749,31 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 24px 20px;
-    gap: 12px;
+    padding: 28px 24px;
+    gap: 16px;
 }
 
 .build-progress-status-icon {
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.03);
+    transition: background-color 0.3s ease;
+}
+
+/* Success state background */
+/* 成功状态背景 */
+.build-progress-status-icon:has(.build-progress-success) {
+    background: rgba(74, 222, 128, 0.1);
+}
+
+/* Error state background */
+/* 错误状态背景 */
+.build-progress-status-icon:has(.build-progress-error) {
+    background: rgba(239, 68, 68, 0.1);
 }
 
 .build-progress-spinner {
@@ -769,16 +788,31 @@
 
 .build-progress-success {
     color: #4ade80;
+    filter: drop-shadow(0 0 8px rgba(74, 222, 128, 0.3));
 }
 
 .build-progress-error {
     color: #ef4444;
+    filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.3));
 }
 
 .build-progress-message {
-    font-size: 11px;
-    color: #ccc;
+    font-size: 13px;
+    font-weight: 500;
+    color: #e0e0e0;
     text-align: center;
+}
+
+/* Success message styling */
+/* 成功消息样式 */
+.build-progress-dialog:has(.build-progress-success) .build-progress-message {
+    color: #4ade80;
+}
+
+/* Error message styling */
+/* 错误消息样式 */
+.build-progress-dialog:has(.build-progress-error) .build-progress-message {
+    color: #ef4444;
 }
 
 .build-progress-bar-container {
@@ -812,25 +846,35 @@
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    margin-top: 4px;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
 }
 
 .build-result-row {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 8px;
     font-size: 11px;
 }
 
 .build-result-label {
     color: #888;
+    flex-shrink: 0;
+    min-width: 70px;
 }
 
 .build-result-value {
-    color: #ccc;
+    color: #e0e0e0;
     word-break: break-all;
     font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 11px;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 4px 8px;
+    border-radius: 3px;
+    flex: 1;
 }
 
 .build-result-error {
@@ -977,14 +1021,27 @@
 .build-progress-actions {
     display: flex;
     justify-content: center;
-    padding: 12px;
+    gap: 8px;
+    padding: 12px 16px;
     border-top: 1px solid #1a1a1a;
     background: #262626;
 }
 
 .build-progress-actions .build-settings-btn {
-    min-width: 80px;
+    min-width: 100px;
     justify-content: center;
+}
+
+/* Success state actions - show open folder prominently */
+/* 成功状态操作 - 突出显示打开文件夹按钮 */
+.build-progress-actions .build-settings-btn.secondary {
+    background: #374151;
+    border-color: #4b5563;
+}
+
+.build-progress-actions .build-settings-btn.secondary:hover {
+    background: #4b5563;
+    border-color: #6b7280;
 }
 
 /* ==================== Toggle Group | 开关组 ==================== */

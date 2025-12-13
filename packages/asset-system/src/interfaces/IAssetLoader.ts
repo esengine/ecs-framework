@@ -109,6 +109,22 @@ export interface IAssetLoaderFactory {
      * 根据文件路径获取资产类型
      */
     getAssetTypeByPath(path: string): AssetType | null;
+
+    /**
+     * Get all supported file extensions from all registered loaders.
+     * 获取所有注册加载器支持的文件扩展名。
+     *
+     * @returns Array of extension patterns (e.g., ['*.png', '*.jpg', '*.particle'])
+     */
+    getAllSupportedExtensions(): string[];
+
+    /**
+     * Get extension to type mapping for all registered loaders.
+     * 获取所有注册加载器的扩展名到类型的映射。
+     *
+     * @returns Map of extension (without dot) to asset type string
+     */
+    getExtensionTypeMap(): Record<string, string>;
 }
 
 /**
@@ -187,18 +203,8 @@ export interface IMaterialAsset {
     };
 }
 
-/**
- * Prefab asset interface
- * 预制体资产接口
- */
-export interface IPrefabAsset {
-    /** 根实体数据 / Serialized entity hierarchy */
-    root: unknown;
-    /** 包含的组件类型 / Component types used in prefab */
-    componentTypes: string[];
-    /** 引用的资产 / All referenced assets */
-    referencedAssets: AssetGUID[];
-}
+// 预制体资产接口从专用文件导出 | Prefab asset interface exported from dedicated file
+export type { IPrefabAsset, IPrefabData, IPrefabMetadata, IPrefabService } from './IPrefabAsset';
 
 /**
  * Scene asset interface

@@ -10,6 +10,7 @@
   overflow-y: auto;
   z-index: 10001;
   font-size: 13px;
+  transition: opacity 0.1s ease;
 }
 
 .context-menu.submenu {
@@ -29,7 +30,8 @@
   position: relative;
 }
 
-.context-menu-item:hover:not(.disabled) {
+.context-menu-item:hover:not(.disabled),
+.context-menu-item.active:not(.disabled) {
   background-color: #094771;
   color: #ffffff;
 }

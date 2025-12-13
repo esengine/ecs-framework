@@ -1,6 +1,7 @@
 {
   "id": "physics-rapier2d",
   "name": "@esengine/physics-rapier2d",
+  "globalKey": "physicsRapier2d",
   "displayName": "Physics 2D (Rapier)",
   "description": "2D physics using Rapier engine | 使用 Rapier 引擎的 2D 物理",
   "version": "1.0.0",

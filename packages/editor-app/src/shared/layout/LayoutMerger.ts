@@ -24,7 +24,10 @@ export class LayoutMerger {
 
         const newPanelTabs = this.findNewPanels(defaultLayout.layout, newPanelIds);
 
-        if (!this.addNewPanelsToCenter(mergedLayout.layout, newPanelTabs)) {
+        // 构建面板位置映射 | Build panel position map
+        const panelPositionMap = new Map(currentPanels.map((p) => [p.id, p.layout?.position || 'center']));
+
+        if (!this.addNewPanelsToCenter(mergedLayout.layout, newPanelTabs, panelPositionMap)) {
             return defaultLayout;
         }
 
@@ -102,19 +105,30 @@ export class LayoutMerger {
         return newPanelTabs;
     }
 
-    private static addNewPanelsToCenter(node: IJsonLayoutNode, newPanelTabs: IJsonTabNode[]): boolean {
+    /**
+     * 将新面板添加到中心区域
+     * Add new panels to center area
+     *
+     * @param node - 布局节点 | Layout node
+     * @param newPanelTabs - 新面板 tab 数据 | New panel tab data
+     * @param panelPositionMap - 面板位置映射 | Panel position map
+     * @returns 是否成功添加 | Whether successfully added
+     */
+    private static addNewPanelsToCenter(
+        node: IJsonLayoutNode,
+        newPanelTabs: IJsonTabNode[],
+        panelPositionMap: Map<string, string>
+    ): boolean {
         if (isTabsetNode(node)) {
-            const hasNonSidePanel = node.children?.some((child) => {
+            // 检查是否是中心 tabset（包含 center 位置的面板）
+            // Check if this is center tabset (contains center position panels)
+            const hasCenterPanel = node.children?.some((child) => {
                 const id = child.id || '';
-                return (
-                    !id.includes('hierarchy') &&
-                    !id.includes('asset') &&
-                    !id.includes('inspector') &&
-                    !id.includes('console')
-                );
+                const position = panelPositionMap.get(id);
+                return position === 'center' || position === undefined;
             });
 
-            if (hasNonSidePanel && node.children) {
+            if (hasCenterPanel && node.children) {
                 node.children.push(...newPanelTabs);
                 node.selected = node.children.length - 1;
                 return true;
@@ -123,7 +137,7 @@ export class LayoutMerger {
 
         if (hasChildren(node)) {
             for (const child of node.children) {
-                if (this.addNewPanelsToCenter(child as IJsonLayoutNode, newPanelTabs)) {
+                if (this.addNewPanelsToCenter(child as IJsonLayoutNode, newPanelTabs, panelPositionMap)) {
                     return true;
                 }
             }

@@ -14,7 +14,8 @@ import { BoxCollider2DComponent } from '../components/BoxCollider2DComponent';
 import { CircleCollider2DComponent } from '../components/CircleCollider2DComponent';
 import { CapsuleCollider2DComponent } from '../components/CapsuleCollider2DComponent';
 import { PolygonCollider2DComponent } from '../components/PolygonCollider2DComponent';
-import type { Physics2DConfig, Vector2 } from '../types/Physics2DTypes';
+import type { IVector2 } from '@esengine/ecs-framework-math';
+import type { Physics2DConfig } from '../types/Physics2DTypes';
 import { PHYSICS_EVENTS, type CollisionEvent2D, type TriggerEvent2D } from '../types/Physics2DEvents';
 
 /**
@@ -226,49 +227,49 @@ export class Physics2DSystem extends EntitySystem {
      * 设置重力
      * @param gravity 重力向量
      */
-    public setGravity(gravity: Vector2): void {
+    public setGravity(gravity: IVector2): void {
         this._world.setGravity(gravity);
     }
 
     /**
      * 获取重力
      */
-    public getGravity(): Vector2 {
+    public getGravity(): IVector2 {
         return this._world.getGravity();
     }
 
     /**
      * 射线检测
      */
-    public raycast(origin: Vector2, direction: Vector2, maxDistance: number, collisionMask?: number) {
+    public raycast(origin: IVector2, direction: IVector2, maxDistance: number, collisionMask?: number) {
         return this._world.raycast(origin, direction, maxDistance, collisionMask);
     }
 
     /**
      * 射线检测所有
      */
-    public raycastAll(origin: Vector2, direction: Vector2, maxDistance: number, collisionMask?: number) {
+    public raycastAll(origin: IVector2, direction: IVector2, maxDistance: number, collisionMask?: number) {
         return this._world.raycastAll(origin, direction, maxDistance, collisionMask);
     }
 
     /**
      * 点重叠检测
      */
-    public overlapPoint(point: Vector2, collisionMask?: number) {
+    public overlapPoint(point: IVector2, collisionMask?: number) {
         return this._world.overlapPoint(point, collisionMask);
     }
 
     /**
      * 圆形重叠检测
      */
-    public overlapCircle(center: Vector2, radius: number, collisionMask?: number) {
+    public overlapCircle(center: IVector2, radius: number, collisionMask?: number) {
         return this._world.overlapCircle(center, radius, collisionMask);
     }
 
     /**
      * 矩形重叠检测
      */
-    public overlapBox(center: Vector2, halfExtents: Vector2, rotation?: number, collisionMask?: number) {
+    public overlapBox(center: IVector2, halfExtents: IVector2, rotation?: number, collisionMask?: number) {
         return this._world.overlapBox(center, halfExtents, rotation, collisionMask);
     }
 
@@ -298,7 +299,7 @@ export class Physics2DSystem extends EntitySystem {
         }
 
         // 获取位置和旋转
-        const position: Vector2 = {
+        const position: IVector2 = {
             x: transform.position.x,
             y: transform.position.y
         };
@@ -314,7 +315,7 @@ export class Physics2DSystem extends EntitySystem {
         // 收集并创建碰撞体
         const colliderHandles: number[] = [];
         const colliders = this._getColliders(entity);
-        const scale: Vector2 = { x: transform.scale.x, y: transform.scale.y };
+        const scale: IVector2 = { x: transform.scale.x, y: transform.scale.y };
 
         for (const collider of colliders) {
             const colliderHandle = this._world.createCollider(entity.id, collider, bodyHandle, scale);
@@ -368,7 +369,7 @@ export class Physics2DSystem extends EntitySystem {
 
             // 只有当需要同步时才更新物理世界
             if (rigidbody._needsSync) {
-                const position: Vector2 = {
+                const position: IVector2 = {
                     x: transform.position.x,
                     y: transform.position.y
                 };
@@ -380,7 +381,7 @@ export class Physics2DSystem extends EntitySystem {
 
             // 检查碰撞体是否需要重建
             const colliders = this._getColliders(entity);
-            const scale: Vector2 = { x: transform.scale.x, y: transform.scale.y };
+            const scale: IVector2 = { x: transform.scale.x, y: transform.scale.y };
             for (const collider of colliders) {
                 if (collider._needsRebuild) {
                     // 移除旧碰撞体

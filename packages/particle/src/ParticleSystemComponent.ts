@@ -1,12 +1,13 @@
 import { Component, ECSComponent, Property, Serializable, Serialize } from '@esengine/ecs-framework';
-import { assetManager } from '@esengine/asset-system';
+import type { IAssetManager } from '@esengine/asset-system';
+import { SortingLayers, type ISortable } from '@esengine/engine-core';
 import { ParticlePool, type Particle } from './Particle';
 import { ParticleEmitter, EmissionShape, createDefaultEmitterConfig, type EmitterConfig, type ColorValue } from './ParticleEmitter';
 import type { IParticleModule } from './modules/IParticleModule';
 import { ColorOverLifetimeModule } from './modules/ColorOverLifetimeModule';
 import { SizeOverLifetimeModule } from './modules/SizeOverLifetimeModule';
-import { CollisionModule } from './modules/CollisionModule';
-import { ForceFieldModule } from './modules/ForceFieldModule';
+import { CollisionModule, BoundaryType, CollisionBehavior } from './modules/CollisionModule';
+import { ForceFieldModule, ForceFieldType, type ForceField } from './modules/ForceFieldModule';
 import { Physics2DCollisionModule } from './modules/Physics2DCollisionModule';
 import type { IParticleAsset, IBurstConfig } from './loaders/ParticleLoader';
 
@@ -38,6 +39,29 @@ export enum SimulationSpace {
     Local = 'local',
     /** 世界空间（粒子不跟随发射器）| World space (particles don't follow emitter) */
     World = 'world'
+}
+
+/**
+ * 渲染空间
+ * Render space
+ *
+ * 决定粒子在哪个坐标空间渲染。
+ * Determines which coordinate space the particles are rendered in.
+ */
+export enum RenderSpace {
+    /**
+     * 世界空间 - 受世界相机影响
+     * World space - affected by world camera
+     */
+    World = 'world',
+    /**
+     * 屏幕空间 - 使用固定正交投影，不受世界相机影响
+     * Screen space - uses fixed orthographic projection, not affected by world camera
+     *
+     * 适用于点击特效、UI 粒子等需要固定在屏幕上的效果。
+     * Suitable for click effects, UI particles, and other effects that need to stay fixed on screen.
+     */
+    Screen = 'screen'
 }
 
 /**
@@ -95,8 +119,8 @@ export interface ParticleRuntimeOverrides {
  * ```
  */
 @ECSComponent('ParticleSystem')
-@Serializable({ version: 3, typeId: 'ParticleSystem' })
-export class ParticleSystemComponent extends Component {
+@Serializable({ version: 4, typeId: 'ParticleSystem' })
+export class ParticleSystemComponent extends Component implements ISortable {
     // ============= 资产引用 | Asset Reference =============
 
     /**
@@ -143,6 +167,49 @@ export class ParticleSystemComponent extends Component {
         ]
     })
     public simulationSpace: SimulationSpace = SimulationSpace.World;
+
+    // ============= 排序 | Sorting =============
+
+    /**
+     * 排序层
+     * Sorting layer
+     *
+     * 决定渲染的大类顺序。
+     * Determines the major render order category.
+     */
+    @Serialize()
+    @Property({
+        type: 'enum',
+        label: 'Sorting Layer',
+        options: ['Background', 'Default', 'Foreground', 'WorldOverlay', 'UI', 'ScreenOverlay', 'Modal']
+    })
+    public sortingLayer: string = SortingLayers.Default;
+
+    /**
+     * 层内顺序（越高越在上面）
+     * Order within layer (higher = rendered on top)
+     */
+    @Serialize()
+    @Property({ type: 'integer', label: 'Order in Layer' })
+    public orderInLayer: number = 0;
+
+    /**
+     * 渲染空间
+     * Render space
+     *
+     * World: 世界空间，受相机影响（默认）
+     * Screen: 屏幕空间，固定在屏幕上，适用于点击特效等
+     */
+    @Serialize()
+    @Property({
+        type: 'enum',
+        label: 'Render Space',
+        options: [
+            { label: 'World', value: RenderSpace.World },
+            { label: 'Screen', value: RenderSpace.Screen }
+        ]
+    })
+    public renderSpace: RenderSpace = RenderSpace.World;
 
     // ============= 运行时覆盖 | Runtime Overrides =============
 
@@ -279,11 +346,6 @@ export class ParticleSystemComponent extends Component {
         return this._loadedAsset?.textureGuid ?? '';
     }
 
-    /** 排序顺序（从资产读取）| Sorting order (from asset) */
-    get sortingOrder(): number {
-        return this._loadedAsset?.sortingOrder ?? 0;
-    }
-
     /** 爆发列表（从资产读取）| Burst list (from asset) */
     get bursts(): IBurstConfig[] {
         return this._loadedAsset?.bursts ?? [];
@@ -353,10 +415,15 @@ export class ParticleSystemComponent extends Component {
      * 加载粒子资产
      * Load particle asset
      *
+     * @deprecated 建议通过 ParticleUpdateSystem 加载资产，系统会自动处理资产加载和初始化。
+     * Prefer loading assets through ParticleUpdateSystem, which handles asset loading and initialization automatically.
+     *
      * @param guid - Asset GUID to load | 要加载的资产 GUID
+     * @param bForceReload - 是否强制重新加载 | Whether to force reload
+     * @param assetManager - 资产管理器实例（必需）| Asset manager instance (required)
      * @returns Promise that resolves when asset is loaded | 资产加载完成时解析的 Promise
      */
-    async loadAsset(guid: string, bForceReload: boolean = false): Promise<boolean> {
+    async loadAsset(guid: string, bForceReload: boolean = false, assetManager?: IAssetManager): Promise<boolean> {
         if (!guid) {
             this._loadedAsset = null;
             this._lastLoadedGuid = '';
@@ -370,8 +437,12 @@ export class ParticleSystemComponent extends Component {
             return true;
         }
 
+        if (!assetManager) {
+            console.error('[ParticleSystem] assetManager is required for loadAsset. Use ParticleUpdateSystem for automatic asset loading.');
+            return false;
+        }
+
         try {
-            console.log(`[ParticleSystem] Loading asset: ${guid}${bForceReload ? ' (force reload)' : ''}`);
             const result = await assetManager.loadAsset<IParticleAsset>(guid, { forceReload: bForceReload });
             const asset = result?.asset;
 
@@ -379,7 +450,15 @@ export class ParticleSystemComponent extends Component {
                 this._loadedAsset = asset;
                 this._lastLoadedGuid = guid;
                 this._needsRebuild = true;
-                console.log(`[ParticleSystem] Asset loaded successfully:`, asset.name);
+
+                // 应用资产的排序属性 | Apply sorting properties from asset
+                if (asset.sortingLayer) {
+                    this.sortingLayer = asset.sortingLayer;
+                }
+                if (asset.orderInLayer !== undefined) {
+                    this.orderInLayer = asset.orderInLayer;
+                }
+
                 return true;
             } else {
                 console.warn(`[ParticleSystem] Failed to load asset: ${guid}`);
@@ -395,12 +474,17 @@ export class ParticleSystemComponent extends Component {
      * 强制重新加载资产
      * Force reload the asset
      *
+     * @deprecated 建议通过 ParticleUpdateSystem 加载资产。
+     * Prefer loading assets through ParticleUpdateSystem.
+     *
      * 当资产文件内容变化时调用此方法，强制从文件系统重新加载。
      * Call this method when asset file content changes, forcing a reload from filesystem.
+     *
+     * @param assetManager - 资产管理器实例（必需）| Asset manager instance (required)
      */
-    async reloadAsset(): Promise<boolean> {
+    async reloadAsset(assetManager?: IAssetManager): Promise<boolean> {
         if (!this.particleAssetGuid) return false;
-        return this.loadAsset(this.particleAssetGuid, true);
+        return this.loadAsset(this.particleAssetGuid, true, assetManager);
     }
 
     /**
@@ -668,24 +752,87 @@ export class ParticleSystemComponent extends Component {
             this._emitter.config = config;
         }
 
-        // 设置默认模块 | Setup default modules
-        if (this._modules.length === 0) {
-            // 颜色模块（淡出）| Color module (fade out)
-            const colorModule = new ColorOverLifetimeModule();
-            colorModule.gradient = [
-                { time: 0, r: 1, g: 1, b: 1, a: 1 },
-                { time: 1, r: 1, g: 1, b: 1, a: endAlpha }
-            ];
-            this._modules.push(colorModule);
+        // 重建模块列表 | Rebuild modules list
+        // 每次重建时清空并重新创建，确保配置同步
+        // Clear and recreate on each rebuild to ensure config is in sync
+        this._modules = [];
 
-            // 缩放模块 | Size module
-            const sizeModule = new SizeOverLifetimeModule();
-            sizeModule.startMultiplier = 1;
-            sizeModule.endMultiplier = endScale;
-            this._modules.push(sizeModule);
-        }
+        // 颜色模块（淡出）| Color module (fade out)
+        const colorModule = new ColorOverLifetimeModule();
+        colorModule.gradient = [
+            { time: 0, r: 1, g: 1, b: 1, a: 1 },
+            { time: 1, r: 1, g: 1, b: 1, a: endAlpha }
+        ];
+        this._modules.push(colorModule);
+
+        // 缩放模块 | Size module
+        const sizeModule = new SizeOverLifetimeModule();
+        sizeModule.startMultiplier = 1;
+        sizeModule.endMultiplier = endScale;
+        this._modules.push(sizeModule);
+
+        // 从资产配置创建模块 | Create modules from asset configuration
+        this._createModulesFromAsset(asset);
 
         this._needsRebuild = false;
+    }
+
+    /**
+     * 从资产配置创建模块实例
+     * Create module instances from asset configuration
+     */
+    private _createModulesFromAsset(asset: IParticleAsset): void {
+        if (!asset.modules || asset.modules.length === 0) return;
+
+        for (const moduleConfig of asset.modules) {
+            if (!moduleConfig.enabled) continue;
+
+            switch (moduleConfig.type) {
+                case 'Collision': {
+                    const collisionModule = new CollisionModule();
+                    const params = moduleConfig.params;
+                    if (params.boundaryType !== undefined) {
+                        collisionModule.boundaryType = params.boundaryType as BoundaryType;
+                    }
+                    if (params.behavior !== undefined) {
+                        collisionModule.behavior = params.behavior as CollisionBehavior;
+                    }
+                    if (params.left !== undefined) collisionModule.left = params.left as number;
+                    if (params.right !== undefined) collisionModule.right = params.right as number;
+                    if (params.top !== undefined) collisionModule.top = params.top as number;
+                    if (params.bottom !== undefined) collisionModule.bottom = params.bottom as number;
+                    if (params.radius !== undefined) collisionModule.radius = params.radius as number;
+                    if (params.bounceFactor !== undefined) collisionModule.bounceFactor = params.bounceFactor as number;
+                    if (params.lifeLossOnBounce !== undefined) collisionModule.lifeLossOnBounce = params.lifeLossOnBounce as number;
+                    if (params.minVelocityThreshold !== undefined) collisionModule.minVelocityThreshold = params.minVelocityThreshold as number;
+                    this._modules.push(collisionModule);
+                    break;
+                }
+                case 'ForceField': {
+                    const forceModule = new ForceFieldModule();
+                    const params = moduleConfig.params;
+                    // ForceFieldModule 使用 forceFields 数组 | ForceFieldModule uses forceFields array
+                    const field: ForceField = {
+                        type: (params.type as ForceFieldType) ?? ForceFieldType.Wind,
+                        enabled: true,
+                        strength: (params.strength as number) ?? 100,
+                        directionX: params.directionX as number | undefined,
+                        directionY: params.directionY as number | undefined,
+                        centerX: params.centerX as number | undefined,
+                        centerY: params.centerY as number | undefined,
+                        inwardStrength: params.inwardStrength as number | undefined,
+                        frequency: params.frequency as number | undefined,
+                        amplitude: params.amplitude as number | undefined,
+                    };
+                    forceModule.forceFields.push(field);
+                    this._modules.push(forceModule);
+                    break;
+                }
+                // 可扩展其他模块类型 | Extensible for other module types
+                default:
+                    console.warn(`[ParticleSystem] Unknown module type: ${moduleConfig.type}`);
+            }
+        }
     }
 
     private _simulate(
@@ -752,6 +899,15 @@ export class ParticleSystemComponent extends Component {
             const normalizedAge = p.age / p.lifetime;
             for (const module of this._modules) {
                 if (module.enabled) {
+                    // 更新模块的发射器位置 | Update module emitter position
+                    if (module instanceof CollisionModule) {
+                        module.emitterX = worldX;
+                        module.emitterY = worldY;
+                    }
+                    if (module instanceof ForceFieldModule) {
+                        module.emitterX = worldX;
+                        module.emitterY = worldY;
+                    }
                     module.update(p, dt, normalizedAge);
                 }
             }

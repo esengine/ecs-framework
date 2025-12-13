@@ -1,7 +1,7 @@
 //! Sprite batch renderer for efficient 2D rendering.
 //! 用于高效2D渲染的精灵批处理渲染器。
 
-use std::collections::HashMap;
+use indexmap::IndexMap;
 use web_sys::{
     WebGl2RenderingContext, WebGlBuffer, WebGlVertexArrayObject,
 };
@@ -66,9 +66,13 @@ pub struct SpriteBatch {
     /// 最大精灵数。
     max_sprites: usize,
 
-    /// Per-material-texture vertex data buffers.
-    /// 按材质和纹理分组的顶点数据缓冲区。
-    batches: HashMap<BatchKey, Vec<f32>>,
+    /// Per-material-texture vertex data buffers (insertion-ordered).
+    /// 按材质和纹理分组的顶点数据缓冲区（保持插入顺序）。
+    ///
+    /// Uses IndexMap to preserve render order - sprites submitted first
+    /// are rendered first (appear behind later sprites).
+    /// 使用 IndexMap 保持渲染顺序 - 先提交的精灵先渲染（显示在后面）。
+    batches: IndexMap<BatchKey, Vec<f32>>,
 
     /// Total sprite count across all batches.
     /// 所有批次的总精灵数。
@@ -136,7 +140,7 @@ impl SpriteBatch {
             vbo,
             ibo,
             max_sprites,
-            batches: HashMap::new(),
+            batches: IndexMap::new(),
             sprite_count: 0,
         })
     }
@@ -428,9 +432,9 @@ impl SpriteBatch {
         gl.bind_vertex_array(None);
     }
 
-    /// Get all batches for rendering.
-    /// 获取所有批次用于渲染。
-    pub fn batches(&self) -> &HashMap<BatchKey, Vec<f32>> {
+    /// Get all batches for rendering (in insertion order).
+    /// 获取所有批次用于渲染（按插入顺序）。
+    pub fn batches(&self) -> &IndexMap<BatchKey, Vec<f32>> {
         &self.batches
     }
 

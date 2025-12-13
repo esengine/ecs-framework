@@ -42,7 +42,8 @@ export const en: Translations = {
         type: 'Type',
         value: 'Value',
         enabled: 'Enabled',
-        disabled: 'Disabled'
+        disabled: 'Disabled',
+        clear: 'Clear'
     },
 
     // ========================================
@@ -73,7 +74,8 @@ export const en: Translations = {
         forum: 'Forum',
         console: 'Console',
         assetBrowser: 'Asset Browser',
-        profiler: 'Profiler'
+        profiler: 'Profiler',
+        contentBrowser: 'Content Browser'
     },
 
     hierarchy: {
@@ -88,6 +90,7 @@ export const en: Translations = {
         createFolder: 'Create Folder',
         deleteEntity: 'Delete Entity',
         deleteConfirm: 'Are you sure you want to delete entity "{{name}}"?',
+        deleteConfirmWithChildren: 'Are you sure you want to delete entity "{{name}}" and its {{count}} child(ren)?',
         renameEntity: 'Rename Entity',
         duplicateEntity: 'Duplicate Entity',
         localScene: 'Local Scene',
@@ -113,7 +116,8 @@ export const en: Translations = {
             tilemap: 'Tilemap',
             camera2d: 'Camera 2D',
             particleEffect: 'Particle Effect'
-        }
+        },
+        editingPrefab: 'Editing Prefab'
     },
 
     inspector: {
@@ -132,6 +136,43 @@ export const en: Translations = {
             empty: 'No components',
             add: 'Add Component',
             remove: 'Remove'
+        },
+        prefab: {
+            instance: 'Prefab Instance',
+            source: 'Prefab',
+            open: 'Open',
+            select: 'Select',
+            selectAsset: 'Select Prefab Asset',
+            revert: 'Revert',
+            revertAll: 'Revert All',
+            revertTo: 'Revert to Prefab',
+            apply: 'Apply',
+            applyAll: 'Apply All',
+            applyTo: "Apply to '{{name}}'",
+            unpack: 'Unpack',
+            modified: 'Modified',
+            modifications: '{{count}} modification(s)',
+            noModifications: 'No modifications',
+            revertProperty: 'Revert to prefab value',
+            applyConfirm: 'Apply changes to prefab "{{name}}"?',
+            revertConfirm: 'Revert all changes to prefab defaults?',
+            unpackConfirm: 'Unpack prefab instance? This will remove the link to the source prefab.',
+            applyTitle: 'Apply to Prefab',
+            revertTitle: 'Revert to Prefab',
+            unpackTitle: 'Unpack Prefab',
+            applySuccess: 'Changes applied to prefab',
+            applyFailed: 'Failed to apply changes to prefab',
+            revertSuccess: 'Instance reverted to prefab defaults',
+            revertFailed: 'Failed to revert instance',
+            unpackSuccess: 'Prefab link broken',
+            unpackFailed: 'Failed to unpack prefab'
+        },
+        array: {
+            empty: 'Empty array',
+            add: 'Add',
+            remove: 'Remove',
+            dragToReorder: 'Drag to reorder',
+            dropAsset: 'Drop asset'
         }
     },
 
@@ -186,6 +227,15 @@ export const en: Translations = {
         },
         notifications: {
             noScene: 'No Scene'
+        },
+        prefab: {
+            editing: 'Editing',
+            save: 'Save Prefab',
+            exit: 'Exit Edit Mode',
+            saveAndExit: 'Save & Exit',
+            discardChanges: 'Discard Changes',
+            savedSuccess: 'Prefab saved: {{name}}',
+            saveFailed: 'Failed to save prefab'
         }
     },
 
@@ -238,7 +288,8 @@ export const en: Translations = {
         network: 'Network',
         sourceControl: 'Source Control',
         allSaved: 'All Saved',
-        revisionControl: 'Revision Control'
+        revisionControl: 'Revision Control',
+        resetLayout: 'Reset Layout'
     },
 
     // ========================================
@@ -459,9 +510,16 @@ export const en: Translations = {
         saveAll: 'Save All',
         search: 'Search',
         items: 'items',
+        searchResults: 'Found {{found}} of {{total}} items',
+        selectedCount: '{{count}} selected',
         dockInLayout: 'Dock in Layout',
         noProject: 'No project loaded',
         empty: 'This folder is empty',
+        emptyHint: 'Drag files here or right-click to create new assets',
+        loading: 'Loading...',
+        noSearchResults: 'No results found',
+        noSearchResultsHint: 'Try a different search term',
+        createNew: 'Create New',
         newFolder: 'New Folder',
         newPrefix: 'New',
         managedDirectoryTooltip: 'GUID-managed directory - Assets here get unique IDs for references',
@@ -684,7 +742,12 @@ export const en: Translations = {
         envReady: 'Environment Ready',
         envNotReady: 'Environment Issue',
         esbuildReady: 'esbuild ready',
-        esbuildMissing: 'esbuild not found'
+        esbuildMissing: 'esbuild not found',
+        esbuildNotInstalled: 'esbuild Installation Required',
+        esbuildRequired: 'esbuild is required for compiling TypeScript code.',
+        esbuildInstallPrompt: 'Click the button below to install esbuild globally via npm.',
+        installingEsbuild: 'Installing esbuild...',
+        installNow: 'Install Now'
     },
 
     // ========================================
@@ -826,7 +889,8 @@ export const en: Translations = {
         settings: 'Settings',
         copyError: 'Copy error',
         showDetails: 'Show details',
-        collapse: 'Collapse'
+        collapse: 'Collapse',
+        openFolder: 'Open Folder'
     },
 
     // ========================================

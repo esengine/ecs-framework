@@ -3,7 +3,7 @@ import { Folder, File as FileIcon, Image as ImageIcon, Clock, HardDrive, Setting
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { Core } from '@esengine/ecs-framework';
 import { AssetRegistryService } from '@esengine/editor-core';
-import { assetManager as globalAssetManager } from '@esengine/asset-system';
+import { EngineService } from '../../../services/EngineService';
 import { AssetFileInfo } from '../types';
 import { ImagePreview, CodePreview, getLanguageFromExtension } from '../common';
 import '../../../styles/EntityInspector.css';
@@ -77,7 +77,8 @@ export function AssetFileInspector({ fileInfo, content, isImage }: AssetFileInsp
                 setDetectedType(meta.type);
 
                 // Get available loader types from assetManager
-                const loaderFactory = globalAssetManager.getLoaderFactory();
+                const assetManager = EngineService.getInstance().getAssetManager();
+                const loaderFactory = assetManager?.getLoaderFactory();
                 const registeredTypes = loaderFactory?.getRegisteredTypes() || [];
 
                 // Combine built-in types with registered types (deduplicated)

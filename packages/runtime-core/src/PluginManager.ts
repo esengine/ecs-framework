@@ -5,16 +5,16 @@
 
 import { ComponentRegistry, ServiceContainer } from '@esengine/ecs-framework';
 import type { IScene } from '@esengine/ecs-framework';
-import type { IPlugin, IRuntimeModule, SystemContext, ModuleManifest } from '@esengine/engine-core';
+import type { IRuntimePlugin, IRuntimeModule, SystemContext, ModuleManifest } from '@esengine/engine-core';
 
-export type { IPlugin, IRuntimeModule, SystemContext, ModuleManifest };
+export type { IRuntimePlugin, IRuntimeModule, SystemContext, ModuleManifest };
 
 export class RuntimePluginManager {
-    private _plugins = new Map<string, IPlugin>();
+    private _plugins = new Map<string, IRuntimePlugin>();
     private _enabledPlugins = new Set<string>();
     private _bInitialized = false;
 
-    register(plugin: IPlugin): void {
+    register(plugin: IRuntimePlugin): void {
         const id = plugin.manifest.id;
         if (this._plugins.has(id)) {
             return;
@@ -122,11 +122,11 @@ export class RuntimePluginManager {
         }
     }
 
-    getPlugins(): IPlugin[] {
+    getPlugins(): IRuntimePlugin[] {
         return Array.from(this._plugins.values());
     }
 
-    getPlugin(id: string): IPlugin | undefined {
+    getPlugin(id: string): IRuntimePlugin | undefined {
         return this._plugins.get(id);
     }
 

@@ -1,5 +1,7 @@
-import { Injectable, IService, Entity, Core, HierarchyComponent } from '@esengine/ecs-framework';
+import { Injectable, IService, Entity, Core, HierarchyComponent, createLogger } from '@esengine/ecs-framework';
 import { MessageHub } from './MessageHub';
+
+const logger = createLogger('EntityStoreService');
 
 export interface EntityTreeNode {
   entity: Entity;
@@ -85,12 +87,17 @@ export class EntityStoreService implements IService {
 
     public syncFromScene(): void {
         const scene = Core.scene;
-        if (!scene) return;
+        if (!scene) {
+            logger.warn('syncFromScene called but no scene available');
+            return;
+        }
 
         this.entities.clear();
         this.rootEntityIds = [];
 
+        let entityCount = 0;
         scene.entities.forEach((entity) => {
+            entityCount++;
             this.entities.set(entity.id, entity);
             const hierarchy = entity.getComponent(HierarchyComponent);
             const bHasNoParent = hierarchy?.parentId === null || hierarchy?.parentId === undefined;
@@ -98,6 +105,14 @@ export class EntityStoreService implements IService {
                 this.rootEntityIds.push(entity.id);
             }
         });
+
+        logger.debug(`syncFromScene: synced ${entityCount} entities, ${this.rootEntityIds.length} root entities`);
+        if (this.rootEntityIds.length > 0) {
+            const rootNames = this.rootEntityIds
+                .map(id => this.entities.get(id)?.name)
+                .join(', ');
+            logger.debug(`Root entities: ${rootNames}`);
+        }
     }
 
     public reorderEntity(entityId: number, newIndex: number): void {

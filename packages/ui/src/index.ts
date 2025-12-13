@@ -121,9 +121,9 @@ export {
 
 // Systems - Core
 export { UILayoutSystem } from './systems/UILayoutSystem';
-export { UIInputSystem, MouseButton, type UIInputEvent } from './systems/UIInputSystem';
-export { UIAnimationSystem, Easing, type EasingFunction, type EasingName } from './systems/UIAnimationSystem';
-export { UIRenderDataProvider, type IRenderDataProvider, type IUIRenderDataProvider } from './systems/UIRenderDataProvider';
+export { UIInputSystem, type UIInputEvent } from './systems/UIInputSystem';
+export { UIAnimationSystem, UIEasing, type EasingFunction, type EasingName } from './systems/UIAnimationSystem';
+export { UIRenderDataProvider, type IUIRenderDataProvider } from './systems/UIRenderDataProvider';
 
 // Systems - Render (ECS-compliant render systems)
 export {

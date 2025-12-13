@@ -7,7 +7,7 @@
 
 import { MaterialManager, getMaterialManager } from './MaterialManager';
 import { createLogger } from '@esengine/ecs-framework';
-import type { IPlugin, ModuleManifest, IRuntimeModule } from '@esengine/engine-core';
+import type { IRuntimePlugin, ModuleManifest, IRuntimeModule } from '@esengine/engine-core';
 
 /** Logger instance for MaterialRuntimeModule. | MaterialRuntimeModule的日志实例。 */
 const logger = createLogger('MaterialRuntimeModule');
@@ -90,7 +90,7 @@ const manifest: ModuleManifest = {
  * Material System Plugin.
  * 材质系统插件。
  */
-export const MaterialSystemPlugin: IPlugin = {
+export const MaterialSystemPlugin: IRuntimePlugin = {
     manifest,
     runtimeModule: materialRuntimeModule as IRuntimeModule
 };

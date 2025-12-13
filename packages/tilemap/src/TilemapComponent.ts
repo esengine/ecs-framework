@@ -1,6 +1,7 @@
 import { Component, ECSComponent, Serializable, Serialize, Property } from '@esengine/ecs-framework';
 import type { IResourceComponent, ResourceReference } from '@esengine/asset-system';
 import { UVHelper } from '@esengine/asset-system';
+import { SortingLayers, type ISortable } from '@esengine/engine-core';
 
 /**
  * Resize anchor point for tilemap expansion
@@ -160,7 +161,7 @@ export interface ITilemapData {
  */
 @ECSComponent('Tilemap')
 @Serializable({ version: 2, typeId: 'Tilemap' })
-export class TilemapComponent extends Component implements IResourceComponent {
+export class TilemapComponent extends Component implements IResourceComponent, ISortable {
     /** Tilemap asset GUID reference | 瓦片地图资源GUID引用 */
     @Serialize()
     @Property({ type: 'asset', label: 'Tilemap', extensions: ['.tilemap', '.tilemap.json'] })
@@ -211,10 +212,36 @@ export class TilemapComponent extends Component implements IResourceComponent {
     @Property({ type: 'boolean', label: 'Visible' })
     public visible: boolean = true;
 
-    /** Rendering sort order | 渲染排序顺序 */
+    /** Rendering sort order (deprecated, use sortingLayer + orderInLayer) | 渲染排序顺序（已弃用，使用 sortingLayer + orderInLayer） */
     @Serialize()
     @Property({ type: 'integer', label: 'Sorting Order' })
     public sortingOrder: number = 0;
+
+    /**
+     * 排序层
+     * Sorting layer
+     *
+     * 决定渲染的大类顺序，如 Background, Default, UI, Overlay 等。
+     * Determines the major render order category.
+     */
+    @Serialize()
+    @Property({
+        type: 'enum',
+        label: 'Sorting Layer',
+        options: ['Background', 'Default', 'Foreground', 'WorldOverlay', 'UI', 'ScreenOverlay', 'Modal']
+    })
+    public sortingLayer: string = SortingLayers.Default;
+
+    /**
+     * 层内顺序（越高越在上面）
+     * Order within layer (higher = rendered on top)
+     *
+     * 同一排序层内的细分顺序。
+     * Fine-grained order within the same sorting layer.
+     */
+    @Serialize()
+    @Property({ type: 'integer', label: 'Order in Layer' })
+    public orderInLayer: number = 0;
 
     /** Tint color in hex format | 着色颜色（十六进制格式） */
     @Serialize()

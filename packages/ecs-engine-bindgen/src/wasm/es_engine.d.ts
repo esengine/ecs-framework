@@ -154,6 +154,18 @@ export class GameEngine {
    */
   resizeViewport(viewport_id: string, width: number, height: number): void;
   /**
+   * Convert screen coordinates to world coordinates.
+   * 将屏幕坐标转换为世界坐标。
+   *
+   * # Arguments | 参数
+   * * `screen_x` - Screen X coordinate (0 = left edge of canvas)
+   * * `screen_y` - Screen Y coordinate (0 = top edge of canvas)
+   *
+   * # Returns | 返回
+   * Array of [world_x, world_y] | 数组 [world_x, world_y]
+   */
+  screenToWorld(screen_x: number, screen_y: number): Float32Array;
+  /**
    * Set clear color (background color).
    * 设置清除颜色（背景颜色）。
    *
@@ -175,6 +187,18 @@ export class GameEngine {
    * 设置辅助工具可见性。
    */
   setShowGizmos(show: boolean): void;
+  /**
+   * Convert world coordinates to screen coordinates.
+   * 将世界坐标转换为屏幕坐标。
+   *
+   * # Arguments | 参数
+   * * `world_x` - World X coordinate
+   * * `world_y` - World Y coordinate
+   *
+   * # Returns | 返回
+   * Array of [screen_x, screen_y] | 数组 [screen_x, screen_y]
+   */
+  worldToScreen(world_x: number, world_y: number): Float32Array;
   /**
    * Add a circle gizmo outline.
    * 添加圆形Gizmo边框。
@@ -214,6 +238,17 @@ export class GameEngine {
    * 设置材质的vec4 uniform（也用于颜色）。
    */
   setMaterialVec4(material_id: number, name: string, x: number, y: number, z: number, w: number): boolean;
+  /**
+   * Clear all textures and reset state.
+   * 清除所有纹理并重置状态。
+   *
+   * This removes all loaded textures from GPU memory and resets
+   * the ID counter. Use with caution as all texture references
+   * will become invalid.
+   * 这会从GPU内存中移除所有已加载的纹理并重置ID计数器。
+   * 请谨慎使用，因为所有纹理引用都将变得无效。
+   */
+  clearAllTextures(): void;
   /**
    * Render to a specific viewport.
    * 渲染到特定视口。
@@ -318,6 +353,15 @@ export class GameEngine {
    */
   setMaterialBlendMode(material_id: number, blend_mode: number): boolean;
   /**
+   * Clear the texture path cache.
+   * 清除纹理路径缓存。
+   *
+   * This should be called when restoring scene snapshots to ensure
+   * textures are reloaded with correct IDs.
+   * 在恢复场景快照时应调用此方法，以确保纹理使用正确的ID重新加载。
+   */
+  clearTexturePathCache(): void;
+  /**
    * Create a new game engine instance.
    * 创建新的游戏引擎实例。
    *
@@ -375,6 +419,8 @@ export interface InitOutput {
   readonly gameengine_addGizmoLine: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
   readonly gameengine_addGizmoRect: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number) => void;
   readonly gameengine_clear: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly gameengine_clearAllTextures: (a: number) => void;
+  readonly gameengine_clearTexturePathCache: (a: number) => void;
   readonly gameengine_compileShader: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
   readonly gameengine_compileShaderWithId: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
   readonly gameengine_createMaterial: (a: number, b: number, c: number, d: number, e: number) => number;
@@ -401,6 +447,7 @@ export interface InitOutput {
   readonly gameengine_renderToViewport: (a: number, b: number, c: number) => [number, number];
   readonly gameengine_resize: (a: number, b: number, c: number) => void;
   readonly gameengine_resizeViewport: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly gameengine_screenToWorld: (a: number, b: number, c: number) => [number, number];
   readonly gameengine_setActiveViewport: (a: number, b: number, c: number) => number;
   readonly gameengine_setCamera: (a: number, b: number, c: number, d: number, e: number) => void;
   readonly gameengine_setClearColor: (a: number, b: number, c: number, d: number, e: number) => void;
@@ -420,9 +467,10 @@ export interface InitOutput {
   readonly gameengine_unregisterViewport: (a: number, b: number, c: number) => void;
   readonly gameengine_updateInput: (a: number) => void;
   readonly gameengine_width: (a: number) => number;
+  readonly gameengine_worldToScreen: (a: number, b: number, c: number) => [number, number];
   readonly init: () => void;
-  readonly wasm_bindgen__convert__closures_____invoke__hdbeb4a641c76f980: (a: number, b: number) => void;
-  readonly wasm_bindgen__closure__destroy__h201da39d82f7cf6e: (a: number, b: number) => void;
+  readonly wasm_bindgen__convert__closures_____invoke__hc746ced83e8f2609: (a: number, b: number) => void;
+  readonly wasm_bindgen__closure__destroy__hebcd2828f83f27ed: (a: number, b: number) => void;
   readonly __wbindgen_malloc: (a: number, b: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
   readonly __wbindgen_exn_store: (a: number) => void;

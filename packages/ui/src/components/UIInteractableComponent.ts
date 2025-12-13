@@ -38,10 +38,16 @@ export class UIInteractableComponent extends Component {
     /**
      * 是否阻止事件冒泡
      * Whether to block event propagation
+     *
+     * 默认为 false，事件会传递给下层元素。
+     * 设置为 true 时，该元素会阻止事件传递。
+     *
+     * Default is false, events propagate to elements below.
+     * Set to true to prevent event propagation.
      */
     @Serialize()
     @Property({ type: 'boolean', label: 'Block Events' })
-    public blockEvents: boolean = true;
+    public blockEvents: boolean = false;
 
     // ===== 状态 State (由 UIInputSystem 更新) =====
 

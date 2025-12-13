@@ -1,18 +1,19 @@
-import { useState, useEffect, useRef } from 'react';
-import { Component, Core, getComponentInstanceTypeName } from '@esengine/ecs-framework';
-import { PropertyMetadataService, PropertyMetadata, PropertyAction, MessageHub, FileActionRegistry } from '@esengine/editor-core';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Component, Core, getComponentInstanceTypeName, PrefabInstanceComponent, Entity } from '@esengine/ecs-framework';
+import { PropertyMetadataService, PropertyMetadata, PropertyAction, MessageHub, FileActionRegistry, PrefabService } from '@esengine/editor-core';
 import { ChevronRight, ChevronDown, Lock } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { AnimationClipsFieldEditor } from '../infrastructure/field-editors/AnimationClipsFieldEditor';
 import { AssetField } from './inspectors/fields/AssetField';
 import { CollisionLayerField } from './inspectors/fields/CollisionLayerField';
+import { useLocale } from '../hooks/useLocale';
 import '../styles/PropertyInspector.css';
 
 const animationClipsEditor = new AnimationClipsFieldEditor();
 
 interface PropertyInspectorProps {
   component: Component;
-  entity?: any;
+  entity?: Entity;
   version?: number;
   onChange?: (propertyName: string, value: any) => void;
   onAction?: (actionId: string, propertyName: string, component: Component) => void;
@@ -21,8 +22,46 @@ interface PropertyInspectorProps {
 export function PropertyInspector({ component, entity, version, onChange, onAction }: PropertyInspectorProps) {
     const [properties, setProperties] = useState<Record<string, PropertyMetadata>>({});
     const [controlledFields, setControlledFields] = useState<Map<string, string>>(new Map());
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; propertyName: string } | null>(null);
     // version is used implicitly - when it changes, React re-renders and getValue reads fresh values
     void version;
+
+    // 获取预制体服务和组件名称 | Get prefab service and component name
+    const prefabService = useMemo(() => Core.services.tryResolve(PrefabService) as PrefabService | null, []);
+    const componentTypeName = useMemo(() => getComponentInstanceTypeName(component), [component]);
+
+    // 获取预制体实例组件 | Get prefab instance component
+    const prefabInstanceComp = useMemo(() => {
+        return entity?.getComponent(PrefabInstanceComponent) ?? null;
+    }, [entity, version]);
+
+    // 检查属性是否被覆盖 | Check if property is overridden
+    const isPropertyOverridden = useCallback((propertyName: string): boolean => {
+        if (!prefabInstanceComp) return false;
+        return prefabInstanceComp.isPropertyModified(componentTypeName, propertyName);
+    }, [prefabInstanceComp, componentTypeName]);
+
+    // 处理属性右键菜单 | Handle property context menu
+    const handlePropertyContextMenu = useCallback((e: React.MouseEvent, propertyName: string) => {
+        if (!isPropertyOverridden(propertyName)) return;
+        e.preventDefault();
+        setContextMenu({ x: e.clientX, y: e.clientY, propertyName });
+    }, [isPropertyOverridden]);
+
+    // 还原属性 | Revert property
+    const handleRevertProperty = useCallback(async () => {
+        if (!contextMenu || !prefabService || !entity) return;
+
+        await prefabService.revertProperty(entity, componentTypeName, contextMenu.propertyName);
+        setContextMenu(null);
+    }, [contextMenu, prefabService, entity, componentTypeName]);
+
+    // 关闭右键菜单 | Close context menu
+    useEffect(() => {
+        const handleClick = () => setContextMenu(null);
+        document.addEventListener('click', handleClick);
+        return () => document.removeEventListener('click', handleClick);
+    }, []);
 
     // Scan entity for components that control this component's properties
     useEffect(() => {
@@ -236,7 +275,7 @@ export function PropertyInspector({ component, entity, version, onChange, onActi
                 const canCreate = creationMapping !== null;
 
                 return (
-                    <div key={propertyName} className="property-field">
+                    <div key={propertyName} className="property-field property-field-asset">
                         <label className="property-label">
                             {label}
                             {controlledBy && (
@@ -300,6 +339,28 @@ export function PropertyInspector({ component, entity, version, onChange, onActi
                     />
                 );
 
+            case 'array': {
+                const arrayMeta = metadata as {
+                    itemType?: { type: string; extensions?: string[]; assetType?: string };
+                    minLength?: number;
+                    maxLength?: number;
+                    reorderable?: boolean;
+                };
+                return (
+                    <ArrayField
+                        key={propertyName}
+                        label={label}
+                        value={value ?? []}
+                        itemType={arrayMeta.itemType}
+                        minLength={arrayMeta.minLength}
+                        maxLength={arrayMeta.maxLength}
+                        reorderable={arrayMeta.reorderable}
+                        readOnly={metadata.readOnly}
+                        onChange={(newValue) => handleChange(propertyName, newValue)}
+                    />
+                );
+            }
+
             default:
                 return null;
         }
@@ -307,8 +368,36 @@ export function PropertyInspector({ component, entity, version, onChange, onActi
 
     return (
         <div className="property-inspector">
-            {Object.entries(properties).map(([propertyName, metadata]) =>
-                renderProperty(propertyName, metadata)
+            {Object.entries(properties).map(([propertyName, metadata]) => {
+                const overridden = isPropertyOverridden(propertyName);
+                return (
+                    <div
+                        key={propertyName}
+                        className={`property-row ${overridden ? 'overridden' : ''}`}
+                        onContextMenu={(e) => handlePropertyContextMenu(e, propertyName)}
+                    >
+                        {renderProperty(propertyName, metadata)}
+                        {overridden && (
+                            <span className="property-override-indicator" title="Modified from prefab" />
+                        )}
+                    </div>
+                );
+            })}
+
+            {/* 右键菜单 | Context Menu */}
+            {contextMenu && (
+                <div
+                    className="property-context-menu"
+                    style={{ left: contextMenu.x, top: contextMenu.y }}
+                >
+                    <button
+                        className="property-context-menu-item"
+                        onClick={handleRevertProperty}
+                    >
+                        <span>↩</span>
+                        <span>Revert to Prefab</span>
+                    </button>
+                </div>
             )}
         </div>
     );
@@ -331,7 +420,16 @@ function NumberField({ label, value, min, max, step = 0.1, isInteger = false, re
     const [isDragging, setIsDragging] = useState(false);
     const [dragStartX, setDragStartX] = useState(0);
     const [dragStartValue, setDragStartValue] = useState(0);
+    const [localValue, setLocalValue] = useState(String(value ?? 0));
+    const [isFocused, setIsFocused] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
+
+    // 同步外部值 | Sync external value
+    useEffect(() => {
+        if (!isFocused && !isDragging) {
+            setLocalValue(String(value ?? 0));
+        }
+    }, [value, isFocused, isDragging]);
 
     const renderActionButton = (action: PropertyAction) => {
         const IconComponent = action.icon ? (LucideIcons as unknown as Record<string, React.ComponentType<{ size?: number }>>)[action.icon] : null;
@@ -389,6 +487,33 @@ function NumberField({ label, value, min, max, step = 0.1, isInteger = false, re
         };
     }, [isDragging, dragStartX, dragStartValue, step, min, max, onChange]);
 
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            e.currentTarget.blur();
+        } else if (e.key === 'Escape') {
+            setLocalValue(String(value ?? 0));
+            e.currentTarget.blur();
+        }
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setLocalValue(e.target.value);
+    };
+
+    const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+        setIsFocused(true);
+        e.target.select();
+    };
+
+    const handleBlur = () => {
+        setIsFocused(false);
+        let val = parseFloat(localValue) || 0;
+        if (min !== undefined) val = Math.max(min, val);
+        if (max !== undefined) val = Math.min(max, val);
+        if (isInteger) val = Math.round(val);
+        onChange(val);
+    };
+
     return (
         <div className="property-field">
             <label
@@ -402,16 +527,15 @@ function NumberField({ label, value, min, max, step = 0.1, isInteger = false, re
                 ref={inputRef}
                 type="number"
                 className="property-input property-input-number"
-                value={value}
+                value={localValue}
                 min={min}
                 max={max}
                 step={step}
                 disabled={readOnly}
-                onChange={(e) => {
-                    const val = parseFloat(e.target.value) || 0;
-                    onChange(isInteger ? Math.round(val) : val);
-                }}
-                onFocus={(e) => e.target.select()}
+                onChange={handleInputChange}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+                onKeyDown={handleKeyDown}
             />
             {actions && actions.length > 0 && (
                 <div className="property-actions">
@@ -430,16 +554,42 @@ interface StringFieldProps {
 }
 
 function StringField({ label, value, readOnly, onChange }: StringFieldProps) {
+    const [localValue, setLocalValue] = useState(value ?? '');
+    const [isFocused, setIsFocused] = useState(false);
+
+    useEffect(() => {
+        if (!isFocused) {
+            setLocalValue(value ?? '');
+        }
+    }, [value, isFocused]);
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            e.currentTarget.blur();
+        } else if (e.key === 'Escape') {
+            setLocalValue(value ?? '');
+            e.currentTarget.blur();
+        }
+    };
+
     return (
         <div className="property-field">
             <label className="property-label">{label}</label>
             <input
                 type="text"
                 className="property-input property-input-text"
-                value={value}
+                value={localValue}
                 disabled={readOnly}
-                onChange={(e) => onChange(e.target.value)}
-                onFocus={(e) => e.target.select()}
+                onChange={(e) => setLocalValue(e.target.value)}
+                onFocus={(e) => {
+                    setIsFocused(true);
+                    e.target.select();
+                }}
+                onBlur={() => {
+                    setIsFocused(false);
+                    onChange(localValue);
+                }}
+                onKeyDown={handleKeyDown}
             />
         </div>
     );
@@ -695,7 +845,17 @@ interface DraggableAxisInputProps {
 
 function DraggableAxisInput({ axis, value, readOnly, compact, onChange }: DraggableAxisInputProps) {
     const [isDragging, setIsDragging] = useState(false);
+    const [localValue, setLocalValue] = useState(String(value ?? 0));
+    const [isFocused, setIsFocused] = useState(false);
     const dragStartRef = useRef({ x: 0, value: 0 });
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    // 同步外部值（不在聚焦或拖动时）| Sync external value (not when focused or dragging)
+    useEffect(() => {
+        if (!isFocused && !isDragging) {
+            setLocalValue(String(value ?? 0));
+        }
+    }, [value, isFocused, isDragging]);
 
     const handleMouseDown = (e: React.MouseEvent) => {
         if (readOnly) return;
@@ -730,6 +890,37 @@ function DraggableAxisInput({ axis, value, readOnly, compact, onChange }: Dragga
     const axisClass = `property-vector-axis-${axis}`;
     const inputClass = compact ? 'property-input property-input-number-compact' : 'property-input property-input-number';
 
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            // 确认输入并失焦 | Confirm input and blur
+            e.currentTarget.blur();
+        } else if (e.key === 'Escape') {
+            // 取消输入，恢复原值 | Cancel input, restore original value
+            setLocalValue(String(value ?? 0));
+            e.currentTarget.blur();
+        }
+        // Tab 键使用浏览器默认行为 | Tab uses browser default behavior
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setLocalValue(e.target.value);
+    };
+
+    const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+        setIsFocused(true);
+        e.target.select();
+    };
+
+    const handleBlur = () => {
+        setIsFocused(false);
+        const parsed = parseFloat(localValue);
+        if (!isNaN(parsed)) {
+            onChange(Math.round(parsed * 1000) / 1000);
+        } else {
+            setLocalValue(String(value ?? 0));
+        }
+    };
+
     return (
         <div className={compact ? 'property-vector-axis-compact' : 'property-vector-axis'}>
             <span
@@ -740,13 +931,16 @@ function DraggableAxisInput({ axis, value, readOnly, compact, onChange }: Dragga
                 {axis.toUpperCase()}
             </span>
             <input
+                ref={inputRef}
                 type="number"
                 className={inputClass}
-                value={value ?? 0}
+                value={localValue}
                 disabled={readOnly}
                 step={0.1}
-                onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-                onFocus={(e) => e.target.select()}
+                onChange={handleInputChange}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+                onKeyDown={handleKeyDown}
             />
         </div>
     );
@@ -950,6 +1144,161 @@ function EnumField({ label, value, options, readOnly, onChange }: EnumFieldProps
                     </div>
                 )}
             </div>
+        </div>
+    );
+}
+
+// ============= ArrayField 数组字段组件 =============
+
+interface ArrayFieldProps {
+    label: string;
+    value: any[];
+    itemType?: { type: string; extensions?: string[]; assetType?: string };
+    minLength?: number;
+    maxLength?: number;
+    reorderable?: boolean;
+    readOnly?: boolean;
+    onChange: (value: any[]) => void;
+}
+
+function ArrayField({
+    label,
+    value,
+    itemType,
+    minLength = 0,
+    maxLength = 100,
+    reorderable = true,
+    readOnly,
+    onChange
+}: ArrayFieldProps) {
+    const { t } = useLocale();
+    const [isExpanded, setIsExpanded] = useState(true);
+    const [dragIndex, setDragIndex] = useState<number | null>(null);
+
+    const safeValue = Array.isArray(value) ? value : [];
+    const canAdd = !readOnly && safeValue.length < maxLength;
+    const canRemove = !readOnly && safeValue.length > minLength;
+
+    const handleAdd = () => {
+        if (!canAdd) return;
+        let defaultValue: any = '';
+        if (itemType?.type === 'number') defaultValue = 0;
+        if (itemType?.type === 'boolean') defaultValue = false;
+        onChange([...safeValue, defaultValue]);
+    };
+
+    const handleRemove = (index: number) => {
+        if (!canRemove) return;
+        const newValue = [...safeValue];
+        newValue.splice(index, 1);
+        onChange(newValue);
+    };
+
+    const handleItemChange = (index: number, newItemValue: any) => {
+        const newValue = [...safeValue];
+        newValue[index] = newItemValue;
+        onChange(newValue);
+    };
+
+    const handleDragStart = (index: number) => {
+        if (!reorderable || readOnly) return;
+        setDragIndex(index);
+    };
+
+    const handleDragOver = (e: React.DragEvent, index: number) => {
+        e.preventDefault();
+        if (dragIndex === null || dragIndex === index) return;
+
+        const newValue = [...safeValue];
+        const [removed] = newValue.splice(dragIndex, 1);
+        newValue.splice(index, 0, removed);
+        onChange(newValue);
+        setDragIndex(index);
+    };
+
+    const handleDragEnd = () => {
+        setDragIndex(null);
+    };
+
+    // 渲染数组项 | Render array item
+    const renderItem = (item: any, index: number) => {
+        const isAsset = itemType?.type === 'asset';
+
+        return (
+            <div
+                key={index}
+                className={`array-field-item ${dragIndex === index ? 'dragging' : ''}`}
+                draggable={reorderable && !readOnly}
+                onDragStart={() => handleDragStart(index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDragEnd={handleDragEnd}
+            >
+                {reorderable && !readOnly && (
+                    <span className="array-field-drag-handle" title={t('inspector.array.dragToReorder')}>⋮⋮</span>
+                )}
+                <span className="array-field-index">[{index}]</span>
+                <div className="array-field-value">
+                    {isAsset ? (
+                        <AssetField
+                            value={item ?? null}
+                            onChange={(newValue) => handleItemChange(index, newValue || '')}
+                            fileExtension={itemType?.extensions?.[0] || ''}
+                            placeholder={t('inspector.array.dropAsset')}
+                            readonly={readOnly}
+                        />
+                    ) : (
+                        <input
+                            type="text"
+                            className="property-input property-input-text"
+                            value={item ?? ''}
+                            disabled={readOnly}
+                            onChange={(e) => handleItemChange(index, e.target.value)}
+                        />
+                    )}
+                </div>
+                {canRemove && (
+                    <button
+                        className="array-field-remove"
+                        onClick={() => handleRemove(index)}
+                        title={t('inspector.array.remove')}
+                    >
+                        ×
+                    </button>
+                )}
+            </div>
+        );
+    };
+
+    return (
+        <div className="property-field property-field-array">
+            <div className="array-field-header">
+                <button
+                    className="property-expand-btn"
+                    onClick={() => setIsExpanded(!isExpanded)}
+                >
+                    {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                </button>
+                <label className="property-label">{label}</label>
+                <span className="array-field-count">[{safeValue.length}]</span>
+                {canAdd && (
+                    <button
+                        className="array-field-add"
+                        onClick={handleAdd}
+                        title={t('inspector.array.add')}
+                    >
+                        +
+                    </button>
+                )}
+            </div>
+            {isExpanded && (
+                <div className="array-field-items">
+                    {safeValue.length === 0 ? (
+                        <div className="array-field-empty">{t('inspector.array.empty')}</div>
+                    ) : (
+                        safeValue.map((item, index) => renderItem(item, index))
+                    )}
+                </div>
+            )}
         </div>
     );
 }

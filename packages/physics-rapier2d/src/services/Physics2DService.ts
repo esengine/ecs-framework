@@ -6,7 +6,8 @@
  */
 
 import type { IService } from '@esengine/ecs-framework';
-import type { Vector2, Physics2DConfig, RaycastHit2D, OverlapResult2D } from '../types/Physics2DTypes';
+import type { IVector2 } from '@esengine/ecs-framework-math';
+import type { Physics2DConfig, RaycastHit2D, OverlapResult2D } from '../types/Physics2DTypes';
 import { DEFAULT_PHYSICS_CONFIG, CollisionLayer2D } from '../types/Physics2DTypes';
 import type { Physics2DSystem } from '../systems/Physics2DSystem';
 
@@ -59,7 +60,7 @@ export class Physics2DService implements IService {
     /**
      * 设置重力
      */
-    public setGravity(gravity: Vector2): void {
+    public setGravity(gravity: IVector2): void {
         this._config.gravity = { ...gravity };
         this._physicsSystem?.setGravity(gravity);
     }
@@ -67,7 +68,7 @@ export class Physics2DService implements IService {
     /**
      * 获取重力
      */
-    public getGravity(): Vector2 {
+    public getGravity(): IVector2 {
         return this._physicsSystem?.getGravity() ?? { ...this._config.gravity };
     }
 
@@ -95,8 +96,8 @@ export class Physics2DService implements IService {
      * @param collisionMask 碰撞掩码（默认所有层）
      */
     public raycast(
-        origin: Vector2,
-        direction: Vector2,
+        origin: IVector2,
+        direction: IVector2,
         maxDistance: number,
         collisionMask: number = CollisionLayer2D.All
     ): RaycastHit2D | null {
@@ -111,8 +112,8 @@ export class Physics2DService implements IService {
      * @param collisionMask 碰撞掩码（默认所有层）
      */
     public raycastAll(
-        origin: Vector2,
-        direction: Vector2,
+        origin: IVector2,
+        direction: IVector2,
         maxDistance: number,
         collisionMask: number = CollisionLayer2D.All
     ): RaycastHit2D[] {
@@ -124,7 +125,7 @@ export class Physics2DService implements IService {
      * @param point 检测点
      * @param collisionMask 碰撞掩码
      */
-    public overlapPoint(point: Vector2, collisionMask: number = CollisionLayer2D.All): OverlapResult2D {
+    public overlapPoint(point: IVector2, collisionMask: number = CollisionLayer2D.All): OverlapResult2D {
         return this._physicsSystem?.overlapPoint(point, collisionMask) ?? { entityIds: [], colliderHandles: [] };
     }
 
@@ -135,7 +136,7 @@ export class Physics2DService implements IService {
      * @param collisionMask 碰撞掩码
      */
     public overlapCircle(
-        center: Vector2,
+        center: IVector2,
         radius: number,
         collisionMask: number = CollisionLayer2D.All
     ): OverlapResult2D {
@@ -150,8 +151,8 @@ export class Physics2DService implements IService {
      * @param collisionMask 碰撞掩码
      */
     public overlapBox(
-        center: Vector2,
-        halfExtents: Vector2,
+        center: IVector2,
+        halfExtents: IVector2,
         rotation: number = 0,
         collisionMask: number = CollisionLayer2D.All
     ): OverlapResult2D {
@@ -168,7 +169,7 @@ export class Physics2DService implements IService {
     /**
      * 归一化向量
      */
-    public normalize(v: Vector2): Vector2 {
+    public normalize(v: IVector2): IVector2 {
         const length = Math.sqrt(v.x * v.x + v.y * v.y);
         if (length === 0) return { x: 0, y: 0 };
         return { x: v.x / length, y: v.y / length };
@@ -177,7 +178,7 @@ export class Physics2DService implements IService {
     /**
      * 计算两点之间的距离
      */
-    public distance(a: Vector2, b: Vector2): number {
+    public distance(a: IVector2, b: IVector2): number {
         const dx = b.x - a.x;
         const dy = b.y - a.y;
         return Math.sqrt(dx * dx + dy * dy);
@@ -186,21 +187,21 @@ export class Physics2DService implements IService {
     /**
      * 计算向量长度
      */
-    public magnitude(v: Vector2): number {
+    public magnitude(v: IVector2): number {
         return Math.sqrt(v.x * v.x + v.y * v.y);
     }
 
     /**
      * 向量点积
      */
-    public dot(a: Vector2, b: Vector2): number {
+    public dot(a: IVector2, b: IVector2): number {
         return a.x * b.x + a.y * b.y;
     }
 
     /**
      * 向量叉积（返回标量，2D 特有）
      */
-    public cross(a: Vector2, b: Vector2): number {
+    public cross(a: IVector2, b: IVector2): number {
         return a.x * b.y - a.y * b.x;
     }
 

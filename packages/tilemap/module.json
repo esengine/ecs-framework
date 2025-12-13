@@ -1,6 +1,7 @@
 {
   "id": "tilemap",
   "name": "@esengine/tilemap",
+  "globalKey": "tilemap",
   "displayName": "Tilemap 2D",
   "description": "2D tilemap rendering and editing | 2D 瓦片地图渲染和编辑",
   "version": "1.0.0",
@@ -39,6 +40,10 @@
       "TilemapLoader",
       "TilesetLoader"
     ]
+  },
+  "assetExtensions": {
+    ".tilemap.json": "tilemap",
+    ".tileset.json": "tileset"
   },
   "editorPackage": "@esengine/tilemap-editor",
   "requiresWasm": false,

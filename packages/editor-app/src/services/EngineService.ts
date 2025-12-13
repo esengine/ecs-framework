@@ -7,9 +7,9 @@
  */
 
 import { GizmoRegistry, EntityStoreService, MessageHub, SceneManagerService, ProjectService, PluginManager, IPluginManager, AssetRegistryService, type SystemContext } from '@esengine/editor-core';
-import { Core, Scene, Entity, SceneSerializer, ProfilerSDK, createLogger } from '@esengine/ecs-framework';
+import { Core, Scene, Entity, SceneSerializer, ProfilerSDK, createLogger, PluginServiceRegistry } from '@esengine/ecs-framework';
 import { CameraConfig, EngineBridgeToken, RenderSystemToken, EngineIntegrationToken } from '@esengine/ecs-engine-bindgen';
-import { TransformComponent, PluginServiceRegistry, TransformTypeToken } from '@esengine/engine-core';
+import { TransformComponent, TransformTypeToken, CanvasElementToken } from '@esengine/engine-core';
 import { SpriteComponent, SpriteAnimatorComponent, SpriteAnimatorSystemToken } from '@esengine/sprite';
 import { invalidateUIRenderCaches, UIRenderProviderToken, UIInputSystemToken } from '@esengine/ui';
 import * as esEngine from '@esengine/engine';
@@ -18,11 +18,10 @@ import {
     EngineIntegration,
     AssetPathResolver,
     AssetPlatform,
-    globalPathResolver,
     SceneResourceManager,
-    assetManager as globalAssetManager,
     AssetType,
-    AssetManagerToken
+    AssetManagerToken,
+    isValidGUID
 } from '@esengine/asset-system';
 import {
     GameRuntime,
@@ -33,6 +32,7 @@ import {
 import { BehaviorTreeSystemToken } from '@esengine/behavior-tree';
 import { Physics2DSystemToken } from '@esengine/physics-rapier2d';
 import { getMaterialManager } from '@esengine/material-system';
+import { WebInputSubsystem } from '@esengine/platform-web';
 import { resetEngineState } from '../hooks/useEngine';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { IdGenerator } from '../utils/idGenerator';
@@ -120,13 +120,17 @@ export class EngineService {
             };
 
             // 创建编辑器平台适配器
+            // Create editor platform adapter
             const platform = new EditorPlatformAdapter({
                 wasmModule: esEngine,
                 pathTransformer,
                 gizmoDataProvider: (component, entity, isSelected) =>
                     GizmoRegistry.getGizmoData(component, entity, isSelected),
                 hasGizmoProvider: (component) =>
-                    GizmoRegistry.hasProvider(component.constructor as any)
+                    GizmoRegistry.hasProvider(component.constructor as any),
+                // 提供输入子系统用于 Play 模式下的游戏输入
+                // Provide input subsystem for game input in Play mode
+                inputSubsystemFactory: () => new WebInputSubsystem()
             });
 
             // 创建统一运行时
@@ -212,6 +216,13 @@ export class EngineService {
         services.register(EngineIntegrationToken, this._engineIntegration);
         services.register(TransformTypeToken, TransformComponent);
 
+        // 注册 Canvas 元素（用于坐标转换等）
+        // Register canvas element (for coordinate conversion, etc.)
+        const canvas = this._runtime.platform.getCanvas();
+        if (canvas) {
+            services.register(CanvasElementToken, canvas);
+        }
+
         // 创建系统上下文
         const context: SystemContext = {
             isEditor: true,
@@ -224,6 +235,10 @@ export class EngineService {
         // Re-sync assets after plugins registered their loaders
         // 插件注册完加载器后，重新同步资产（确保类型正确）
         await this._syncAssetRegistryToManager();
+
+        // Subscribe to asset changes to sync new assets to runtime
+        // 订阅资产变化以将新资产同步到运行时
+        this._subscribeToAssetChanges();
 
         // 同步服务注册表到 GameRuntime（用于 start/stop 时启用/禁用系统）
         // Sync service registry to GameRuntime (for enabling/disabling systems on start/stop)
@@ -272,6 +287,10 @@ export class EngineService {
      * 清理模块系统
      */
     clearModuleSystems(): void {
+        // Unsubscribe from asset change events
+        // 取消订阅资产变化事件
+        this._unsubscribeFromAssetChanges();
+
         const pluginManager = Core.services.tryResolve<PluginManager>(IPluginManager);
         if (pluginManager) {
             pluginManager.clearSceneSystems();
@@ -394,9 +413,9 @@ export class EngineService {
      */
     private async _initializeAssetSystem(): Promise<void> {
         try {
-            // Use global assetManager instance so all systems share the same manager
-            // 使用全局 assetManager 实例，以便所有系统共享同一个管理器
-            this._assetManager = globalAssetManager;
+            // Create a new AssetManager instance for this editor session
+            // 为此编辑器会话创建新的 AssetManager 实例
+            this._assetManager = new AssetManager();
 
             // Set up asset reader for Tauri environment.
             // 为 Tauri 环境设置资产读取器。
@@ -413,8 +432,8 @@ export class EngineService {
                 }
             }
 
-            // Sync AssetRegistryService data to global assetManager's database
-            // 将 AssetRegistryService 的数据同步到全局 assetManager 的数据库
+            // Sync AssetRegistryService data to assetManager's database
+            // 将 AssetRegistryService 的数据同步到 assetManager 的数据库
             await this._syncAssetRegistryToManager();
 
             const pathTransformerFn = (path: string) => {
@@ -436,11 +455,6 @@ export class EngineService {
             };
 
             this._assetPathResolver = new AssetPathResolver({
-                platform: AssetPlatform.Editor,
-                pathTransformer: pathTransformerFn
-            });
-
-            globalPathResolver.updateConfig({
                 platform: AssetPlatform.Editor,
                 pathTransformer: pathTransformerFn
             });
@@ -565,6 +579,103 @@ export class EngineService {
         logger.debug('Asset sync complete');
     }
 
+    /** Unsubscribe function for assets:changed event | assets:changed 事件的取消订阅函数 */
+    private _assetsChangedUnsubscribe: (() => void) | null = null;
+
+    /**
+     * Subscribe to assets:changed events and sync new assets to runtime AssetManager.
+     * 订阅 assets:changed 事件，将新资产同步到运行时 AssetManager。
+     */
+    private _subscribeToAssetChanges(): void {
+        if (this._assetsChangedUnsubscribe) return; // Already subscribed
+
+        const messageHub = Core.services.tryResolve(MessageHub);
+        if (!messageHub || !this._assetManager) return;
+
+        const database = this._assetManager.getDatabase();
+        const assetRegistry = Core.services.tryResolve(AssetRegistryService) as AssetRegistryService | null;
+        const loaderFactory = this._assetManager.getLoaderFactory();
+
+        this._assetsChangedUnsubscribe = messageHub.subscribe(
+            'assets:changed',
+            async (data: { type: string; path: string; relativePath: string; guid: string }) => {
+                if (data.type === 'add' || data.type === 'modify') {
+                    // Get full asset info from registry
+                    // 从注册表获取完整资产信息
+                    const asset = assetRegistry?.getAsset(data.guid);
+                    if (!asset) return;
+
+                    // Determine asset type
+                    // 确定资产类型
+                    let assetType: string | null = null;
+
+                    // 1. Try to get type from meta file
+                    const meta = assetRegistry?.metaManager.getMetaByGUID(data.guid);
+                    if (meta?.loaderType) {
+                        assetType = meta.loaderType;
+                    }
+
+                    // 2. Try to get type from registered loaders
+                    if (!assetType) {
+                        assetType = loaderFactory?.getAssetTypeByPath?.(asset.path) ?? null;
+                    }
+
+                    // 3. Fallback by extension
+                    if (!assetType) {
+                        const ext = asset.path.substring(asset.path.lastIndexOf('.')).toLowerCase();
+                        if (['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'].includes(ext)) {
+                            assetType = AssetType.Texture;
+                        } else if (['.mp3', '.wav', '.ogg', '.m4a'].includes(ext)) {
+                            assetType = AssetType.Audio;
+                        } else if (['.json'].includes(ext)) {
+                            assetType = AssetType.Json;
+                        } else if (['.txt', '.md', '.xml', '.yaml'].includes(ext)) {
+                            assetType = AssetType.Text;
+                        } else {
+                            assetType = AssetType.Custom;
+                        }
+                    }
+
+                    // Add to runtime database
+                    // 添加到运行时数据库
+                    database.addAsset({
+                        guid: asset.guid,
+                        path: asset.path,
+                        type: assetType,
+                        name: asset.name,
+                        size: asset.size,
+                        hash: asset.hash || '',
+                        dependencies: [],
+                        labels: [],
+                        tags: new Map(),
+                        lastModified: asset.lastModified,
+                        version: 1
+                    });
+
+                    logger.debug(`Asset synced to runtime: ${asset.path} (${data.guid})`);
+                } else if (data.type === 'remove') {
+                    // Remove from runtime database
+                    // 从运行时数据库移除
+                    database.removeAsset(data.guid);
+                    logger.debug(`Asset removed from runtime: ${data.guid}`);
+                }
+            }
+        );
+
+        logger.debug('Subscribed to assets:changed events');
+    }
+
+    /**
+     * Unsubscribe from assets:changed events.
+     * 取消订阅 assets:changed 事件。
+     */
+    private _unsubscribeFromAssetChanges(): void {
+        if (this._assetsChangedUnsubscribe) {
+            this._assetsChangedUnsubscribe();
+            this._assetsChangedUnsubscribe = null;
+        }
+    }
+
     /**
      * Setup asset path resolver for EngineRenderSystem.
      * 为 EngineRenderSystem 设置资产路径解析器。
@@ -578,10 +689,6 @@ export class EngineService {
         const renderSystem = this._runtime?.renderSystem;
         if (!renderSystem) return;
 
-        // UUID v4 regex for GUID detection
-        // UUID v4 正则表达式用于 GUID 检测
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
         renderSystem.setAssetPathResolver((guidOrPath: string): string => {
             // Skip if already a valid URL
             // 如果已经是有效的 URL 则跳过
@@ -589,9 +696,9 @@ export class EngineService {
                 return guidOrPath;
             }
 
-            // Check if this is a GUID
-            // 检查是否为 GUID
-            if (uuidRegex.test(guidOrPath)) {
+            // Check if this is a GUID using the unified validation function
+            // 使用统一的验证函数检查是否为 GUID
+            if (isValidGUID(guidOrPath)) {
                 const assetRegistry = Core.services.tryResolve(AssetRegistryService) as AssetRegistryService | null;
                 if (assetRegistry) {
                     const relativePath = assetRegistry.getPathByGuid(guidOrPath);
@@ -659,7 +766,8 @@ export class EngineService {
     }
 
     /**
-     * Load texture through asset system
+     * 通过相对路径加载纹理资产（用户脚本使用）
+     * Load texture asset by relative path (for user scripts)
      */
     async loadTextureAsset(path: string): Promise<number> {
         if (!this._assetSystemInitialized || this._initializationError) {
@@ -681,6 +789,29 @@ export class EngineService {
             console.error('Failed to load texture asset:', error);
             const fallbackId = IdGenerator.nextId('texture-fallback');
             return fallbackId;
+        }
+    }
+
+    /**
+     * 通过 GUID 加载纹理资产（内部引用使用）
+     * Load texture asset by GUID (for internal references)
+     */
+    async loadTextureAssetByGuid(guid: string): Promise<number> {
+        if (!this._assetSystemInitialized || this._initializationError) {
+            console.warn('Asset system not initialized');
+            return 0;
+        }
+
+        if (!this._engineIntegration) {
+            console.warn('Engine integration not available');
+            return 0;
+        }
+
+        try {
+            return await this._engineIntegration.loadTextureByGuid(guid);
+        } catch (error) {
+            console.error('Failed to load texture asset by GUID:', guid, error);
+            return 0;
         }
     }
 
@@ -875,7 +1006,15 @@ export class EngineService {
      * Save a snapshot of the current scene state.
      */
     saveSceneSnapshot(): boolean {
-        return this._runtime?.saveSceneSnapshot() ?? false;
+        const success = this._runtime?.saveSceneSnapshot() ?? false;
+
+        if (success) {
+            // 清除 UI 渲染缓存（因为纹理已被清除）
+            // Clear UI render caches (since textures have been cleared)
+            invalidateUIRenderCaches();
+        }
+
+        return success;
     }
 
     /**

@@ -1,5 +1,6 @@
-import type { ParticleSystemComponent } from '../ParticleSystemComponent';
+import { type ParticleSystemComponent, RenderSpace } from '../ParticleSystemComponent';
 import { Color } from '@esengine/ecs-framework-math';
+import { sortingLayerManager, SortingLayers } from '@esengine/engine-core';
 
 /**
  * 粒子渲染数据（与 EngineRenderSystem 兼容）
@@ -14,8 +15,23 @@ export interface ParticleProviderRenderData {
     uvs: Float32Array;
     colors: Uint32Array;
     tileCount: number;
-    sortingOrder: number;
-    texturePath?: string;
+    /**
+     * 排序层名称
+     * Sorting layer name
+     */
+    sortingLayer: string;
+    /**
+     * 层内排序顺序
+     * Order within the sorting layer
+     */
+    orderInLayer: number;
+    /** 纹理 GUID | Texture GUID */
+    textureGuid?: string;
+    /**
+     * 是否在屏幕空间渲染
+     * Whether to render in screen space
+     */
+    bScreenSpace?: boolean;
 }
 
 /**
@@ -118,10 +134,17 @@ export class ParticleRenderDataProvider implements IRenderDataProvider {
             this._colors = new Uint32Array(this._maxParticles);
         }
 
-        // 按 sortingOrder 分组 | Group by sortingOrder
-        const groups = new Map<number, {
+        // 按 sortKey + renderSpace 分组
+        // Group by sortKey + renderSpace
+        // 使用 string key 来区分不同渲染空间的相同 sortKey
+        // Use string key to distinguish same sortKey with different render spaces
+        const groups = new Map<string, {
             component: ParticleSystemComponent;
             transform: ITransformLike;
+            sortingLayer: string;
+            orderInLayer: number;
+            bScreenSpace: boolean;
+            sortKey: number;
         }[]>();
 
         for (const [component, transform] of this._particleSystems) {
@@ -129,25 +152,34 @@ export class ParticleRenderDataProvider implements IRenderDataProvider {
                 continue;
             }
 
-            const order = component.sortingOrder;
-            if (!groups.has(order)) {
-                groups.set(order, []);
+            const sortingLayer = component.sortingLayer ?? SortingLayers.Default;
+            const orderInLayer = component.orderInLayer ?? 0;
+            const sortKey = sortingLayerManager.getSortKey(sortingLayer, orderInLayer);
+            const bScreenSpace = component.renderSpace === RenderSpace.Screen;
+            const groupKey = `${sortKey}:${bScreenSpace ? 'screen' : 'world'}`;
+
+            if (!groups.has(groupKey)) {
+                groups.set(groupKey, []);
             }
-            groups.get(order)!.push({ component, transform });
+            groups.get(groupKey)!.push({ component, transform, sortingLayer, orderInLayer, bScreenSpace, sortKey });
         }
 
-        // 为每个 sortingOrder 组生成渲染数据 | Generate render data for each sortingOrder group
-        for (const [sortingOrder, systems] of groups) {
+        // 按 sortKey 排序后生成渲染数据
+        // Generate render data sorted by sortKey
+        // 字符串 key 格式: "sortKey:space"，按 sortKey 数值排序
+        const sortedKeys = [...groups.keys()].sort((a, b) => {
+            const aKey = parseInt(a.split(':')[0], 10);
+            const bKey = parseInt(b.split(':')[0], 10);
+            return aKey - bKey;
+        });
+
+        for (const groupKey of sortedKeys) {
+            const systems = groups.get(groupKey)!;
             let particleIndex = 0;
 
             for (const { component } of systems) {
                 const pool = component.pool!;
                 const size = component.particleSize;
-                const textureId = component.textureId;
-
-                // 世界偏移 | World offset (particles are already in world space after emission)
-                // 不需要额外偏移，因为粒子发射时已经使用了世界坐标
-                // No additional offset needed since particles use world coords at emission
 
                 pool.forEachActive((p) => {
                     const tOffset = particleIndex * 7;
@@ -162,8 +194,11 @@ export class ParticleRenderDataProvider implements IRenderDataProvider {
                     this._transforms[tOffset + 5] = 0.5; // originX
                     this._transforms[tOffset + 6] = 0.5; // originY
 
-                    // Texture ID
-                    this._textureIds[particleIndex] = textureId;
+                    // Texture ID: 设置为 0，让 EngineRenderSystem 通过 textureGuid 解析
+                    // Set to 0, let EngineRenderSystem resolve via textureGuid
+                    // 这样可以避免场景恢复后 textureId 过期导致的纹理混乱问题
+                    // This avoids texture confusion when textureId becomes stale after scene restore
+                    this._textureIds[particleIndex] = 0;
 
                     // UV (full texture)
                     this._uvs[uvOffset] = 0;
@@ -184,10 +219,11 @@ export class ParticleRenderDataProvider implements IRenderDataProvider {
             }
 
             if (particleIndex > 0) {
-                // 获取纹理路径（支持多种来源）| Get texture path (support multiple sources)
-                const firstComponent = systems[0]?.component;
-                const asset = firstComponent?.loadedAsset as { textureGuid?: string; texturePath?: string } | null;
-                const texPath = asset?.textureGuid || asset?.texturePath || firstComponent?.textureGuid || undefined;
+                // 获取纹理 GUID | Get texture GUID
+                const firstSystem = systems[0];
+                const firstComponent = firstSystem?.component;
+                const asset = firstComponent?.loadedAsset as { textureGuid?: string } | null;
+                const textureGuid = asset?.textureGuid || firstComponent?.textureGuid || undefined;
 
                 // 创建当前组的渲染数据 | Create render data for current group
                 const renderData: ParticleProviderRenderData = {
@@ -196,8 +232,10 @@ export class ParticleRenderDataProvider implements IRenderDataProvider {
                     uvs: this._uvs.subarray(0, particleIndex * 4),
                     colors: this._colors.subarray(0, particleIndex),
                     tileCount: particleIndex,
-                    sortingOrder,
-                    texturePath: texPath
+                    sortingLayer: firstSystem?.sortingLayer ?? SortingLayers.Default,
+                    orderInLayer: firstSystem?.orderInLayer ?? 0,
+                    textureGuid,
+                    bScreenSpace: firstSystem?.bScreenSpace ?? false
                 };
 
                 this._renderDataCache.push(renderData);

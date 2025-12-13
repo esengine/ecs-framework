@@ -6,7 +6,7 @@
  * Following the "who defines interface, who exports token" principle.
  */
 
-import { createServiceToken } from '@esengine/engine-core';
+import { createServiceToken } from '@esengine/ecs-framework';
 import type { IService } from '@esengine/ecs-framework';
 import type { BehaviorTree } from './domain/models/BehaviorTree';
 

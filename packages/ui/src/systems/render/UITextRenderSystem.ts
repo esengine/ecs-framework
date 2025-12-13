@@ -94,10 +94,14 @@ export class UITextRenderSystem extends EntitySystem {
         const collector = getUIRenderCollector();
 
         for (const entity of entities) {
-            const transform = entity.getComponent(UITransformComponent)!;
-            const text = entity.getComponent(UITextComponent)!;
+            const transform = entity.getComponent(UITransformComponent);
+            const text = entity.getComponent(UITextComponent);
 
-            if (!transform.visible || !text.text) continue;
+            // 空值检查 - 组件可能在反序列化或初始化期间尚未就绪
+            // Null check - component may not be ready during deserialization or initialization
+            if (!transform || !text) continue;
+
+            if (!transform.worldVisible || !text.text) continue;
 
             const x = transform.worldX ?? transform.x;
             const y = transform.worldY ?? transform.y;
@@ -108,7 +112,9 @@ export class UITextRenderSystem extends EntitySystem {
             const width = (transform.computedWidth ?? transform.width) * scaleX;
             const height = (transform.computedHeight ?? transform.height) * scaleY;
             const alpha = transform.worldAlpha ?? transform.alpha;
-            const baseOrder = 100 + transform.zIndex;
+            // 使用排序层和层内顺序 | Use sorting layer and order in layer
+            const sortingLayer = transform.sortingLayer;
+            const orderInLayer = transform.orderInLayer;
             // 使用 transform 的 pivot 作为旋转/缩放中心
             const pivotX = transform.pivotX;
             const pivotY = transform.pivotY;
@@ -131,7 +137,8 @@ export class UITextRenderSystem extends EntitySystem {
                 width, height,
                 0xFFFFFF,  // White tint (color is baked into texture)
                 alpha,
-                baseOrder + 1,  // Text renders above background
+                sortingLayer,
+                orderInLayer + 1,  // Text renders above background
                 {
                     rotation,
                     pivotX,

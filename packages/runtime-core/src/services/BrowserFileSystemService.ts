@@ -95,20 +95,30 @@ export class BrowserFileSystemService {
     /**
      * Normalize catalog to ensure it has all required fields
      * 规范化目录，确保包含所有必需字段
+     *
+     * Supports both 'entries' (IAssetCatalog) and 'assets' (IRuntimeCatalog) field names.
+     * 同时支持 'entries' (IAssetCatalog) 和 'assets' (IRuntimeCatalog) 字段名。
      */
     private _normalizeCatalog(raw: Record<string, unknown>): IAssetCatalog {
         // Determine load strategy
         // 确定加载策略
         let loadStrategy: AssetLoadStrategy = 'file';
-        if (raw.loadStrategy === 'bundle' || raw.bundles) {
+        // Only use bundle strategy if explicitly set or bundles is non-empty
+        // 仅当明确设置或 bundles 非空时才使用 bundle 策略
+        const hasBundles = raw.bundles && typeof raw.bundles === 'object' && Object.keys(raw.bundles as object).length > 0;
+        if (raw.loadStrategy === 'bundle' || hasBundles) {
             loadStrategy = 'bundle';
         }
+
+        // Support both 'entries' and 'assets' field names for compatibility
+        // 同时支持 'entries' 和 'assets' 字段名以保持兼容性
+        const entries = (raw.entries ?? raw.assets) as Record<string, IAssetCatalogEntry> ?? {};
 
         return {
             version: (raw.version as string) ?? '1.0.0',
             createdAt: (raw.createdAt as number) ?? Date.now(),
             loadStrategy,
-            entries: (raw.entries as Record<string, IAssetCatalogEntry>) ?? {},
+            entries,
             bundles: (raw.bundles as Record<string, IAssetBundleInfo>) ?? undefined
         };
     }

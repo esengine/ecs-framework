@@ -8,7 +8,7 @@
  * 运行时使用 PhysicsPlugin from '@esengine/physics-rapier2d/runtime'
  */
 
-import type { IPlugin, ModuleManifest } from '@esengine/engine-core';
+import type { IRuntimePlugin, ModuleManifest } from '@esengine/engine-core';
 
 const manifest: ModuleManifest = {
     id: '@esengine/physics-rapier2d',
@@ -35,7 +35,7 @@ const manifest: ModuleManifest = {
  *
  * 编辑器使用此版本注册插件，运行时使用带 WASM 的完整版本。
  */
-export const Physics2DPlugin: IPlugin = {
+export const Physics2DPlugin: IRuntimePlugin = {
     manifest
     // No runtime module - editor doesn't need physics simulation
 };

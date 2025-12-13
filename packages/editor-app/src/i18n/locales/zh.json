@@ -1,4 +1,10 @@
 {
+  "hierarchy": {
+    "visibility": "切换可见性",
+    "hideEntity": "隐藏实体",
+    "showEntity": "显示实体",
+    "emptyHint": "场景中没有实体"
+  },
   "behaviorTree": {
     "title": "行为树编辑器",
     "close": "关闭",

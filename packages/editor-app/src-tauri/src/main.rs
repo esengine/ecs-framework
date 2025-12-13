@@ -54,6 +54,7 @@ fn main() {
             commands::read_file_content,
             commands::write_file_content,
             commands::write_binary_file,
+            commands::append_to_log,
             commands::path_exists,
             commands::create_directory,
             commands::create_file,
@@ -79,6 +80,7 @@ fn main() {
             // System operations
             commands::toggle_devtools,
             commands::open_file_with_default_app,
+            commands::open_folder,
             commands::show_in_folder,
             commands::get_temp_dir,
             commands::open_with_editor,
@@ -92,8 +94,10 @@ fn main() {
             // User code compilation | 用户代码编译
             commands::compile_typescript,
             commands::watch_scripts,
+            commands::watch_assets,
             commands::stop_watch_scripts,
             commands::check_environment,
+            commands::install_esbuild,
             // Build commands | 构建命令
             commands::prepare_build_directory,
             commands::copy_directory,

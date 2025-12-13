@@ -1,6 +1,7 @@
 {
   "id": "runtime-core",
   "name": "@esengine/runtime-core",
+  "globalKey": "runtimeCore",
   "displayName": "Runtime Core",
   "description": "Core runtime framework | 核心运行时框架",
   "version": "1.0.0",

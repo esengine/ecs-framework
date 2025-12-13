@@ -289,9 +289,10 @@ export class AssetRegistryService implements IService {
 
     /**
      * Handle project closed event
+     * 处理项目关闭事件
      */
-    private _onProjectClosed(): void {
-        this.unloadProject();
+    private async _onProjectClosed(): Promise<void> {
+        await this.unloadProject();
     }
 
     /**
@@ -360,6 +361,24 @@ export class AssetRegistryService implements IService {
 
         try {
             const { listen } = await import('@tauri-apps/api/event');
+            const { invoke } = await import('@tauri-apps/api/core');
+
+            // Start asset watcher for managed directories (assets, scenes)
+            // 启动资产监视器监听托管目录（assets, scenes）
+            // Note: scripts is watched by UserCodeService
+            // 注意：scripts 目录由 UserCodeService 监听
+            const directoriesToWatch = MANAGED_ASSET_DIRECTORIES.filter(dir => dir !== 'scripts');
+            if (this._projectPath && directoriesToWatch.length > 0) {
+                try {
+                    await invoke('watch_assets', {
+                        projectPath: this._projectPath,
+                        directories: directoriesToWatch
+                    });
+                    logger.info(`Started watching asset directories | 已启动资产目录监听: ${directoriesToWatch.join(', ')}`);
+                } catch (watchError) {
+                    logger.warn('Failed to start asset watcher | 启动资产监视器失败:', watchError);
+                }
+            }
 
             // Listen to user-code:file-changed event
             // 监听 user-code:file-changed 事件
@@ -378,6 +397,10 @@ export class AssetRegistryService implements IService {
                         // Skip .meta files
                         if (absolutePath.endsWith('.meta')) continue;
 
+                        // Only process files in managed directories
+                        // 只处理托管目录中的文件
+                        if (!this.isPathManaged(absolutePath)) continue;
+
                         // Register or refresh the asset
                         await this.registerAsset(absolutePath);
                     }
@@ -385,6 +408,10 @@ export class AssetRegistryService implements IService {
                     for (const absolutePath of paths) {
                         // Skip .meta files
                         if (absolutePath.endsWith('.meta')) continue;
+
+                        // Only process files in managed directories
+                        // 只处理托管目录中的文件
+                        if (!this.isPathManaged(absolutePath)) continue;
 
                         // Unregister the asset
                         await this.unregisterAsset(absolutePath);
@@ -402,21 +429,37 @@ export class AssetRegistryService implements IService {
      * Unsubscribe from file change events
      * 取消订阅文件变化事件
      */
-    private _unsubscribeFromFileChanges(): void {
+    private async _unsubscribeFromFileChanges(): Promise<void> {
         if (this._eventUnlisten) {
             this._eventUnlisten();
             this._eventUnlisten = undefined;
             logger.debug('Unsubscribed from file change events | 已取消订阅文件变化事件');
         }
+
+        // Stop the asset watcher | 停止资产监视器
+        if (PlatformDetector.isTauriEnvironment() && this._projectPath) {
+            try {
+                const { invoke } = await import('@tauri-apps/api/core');
+                // Stop watcher using the same key format used in watch_assets
+                // 使用与 watch_assets 相同的键格式停止监视器
+                await invoke('stop_watch_scripts', {
+                    projectPath: `${this._projectPath}/assets`
+                });
+                logger.debug('Stopped asset watcher | 已停止资产监视器');
+            } catch (error) {
+                logger.warn('Failed to stop asset watcher | 停止资产监视器失败:', error);
+            }
+        }
     }
 
     /**
      * Unload current project
+     * 卸载当前项目
      */
-    unloadProject(): void {
+    async unloadProject(): Promise<void> {
         // Unsubscribe from file change events
         // 取消订阅文件变化事件
-        this._unsubscribeFromFileChanges();
+        await this._unsubscribeFromFileChanges();
 
         this._projectPath = null;
         this._manifest = null;
@@ -750,6 +793,18 @@ export class AssetRegistryService implements IService {
         await this._saveManifest();
 
         const metadata = this._database.getMetadataByPath(relativePath);
+
+        // Publish event to notify ContentBrowser and other listeners
+        // 发布事件通知 ContentBrowser 和其他监听者
+        if (metadata) {
+            this._messageHub?.publish('assets:changed', {
+                type: 'add',
+                path: absolutePath,
+                relativePath,
+                guid: metadata.guid
+            });
+        }
+
         return metadata?.guid ?? null;
     }
 
@@ -762,9 +817,19 @@ export class AssetRegistryService implements IService {
 
         const metadata = this._database.getMetadataByPath(relativePath);
         if (metadata) {
-            this._database.removeAsset(metadata.guid);
+            const guid = metadata.guid;
+            this._database.removeAsset(guid);
             delete this._manifest.assets[relativePath];
             await this._saveManifest();
+
+            // Publish event to notify ContentBrowser and other listeners
+            // 发布事件通知 ContentBrowser 和其他监听者
+            this._messageHub?.publish('assets:changed', {
+                type: 'remove',
+                path: absolutePath,
+                relativePath,
+                guid
+            });
         }
     }
 
@@ -778,6 +843,18 @@ export class AssetRegistryService implements IService {
         // Re-register the asset
         await this._registerAssetFile(absolutePath, relativePath);
         await this._saveManifest();
+
+        const metadata = this._database.getMetadataByPath(relativePath);
+        if (metadata) {
+            // Publish event to notify ContentBrowser and other listeners
+            // 发布事件通知 ContentBrowser 和其他监听者
+            this._messageHub?.publish('assets:changed', {
+                type: 'modify',
+                path: absolutePath,
+                relativePath,
+                guid: metadata.guid
+            });
+        }
     }
 
     /**
@@ -871,10 +948,12 @@ export class AssetRegistryService implements IService {
 
     /**
      * Dispose the service
+     * 销毁服务
      */
     dispose(): void {
-        this._unsubscribeFromFileChanges();
-        this.unloadProject();
+        // Fire and forget async cleanup | 异步清理（不等待）
+        void this._unsubscribeFromFileChanges();
+        void this.unloadProject();
         this._initialized = false;
     }
 }

@@ -3,7 +3,7 @@
  * UI module service tokens
  */
 
-import { createServiceToken } from '@esengine/engine-core';
+import { createServiceToken } from '@esengine/ecs-framework';
 import type { UILayoutSystem } from './systems/UILayoutSystem';
 import type { UIInputSystem } from './systems/UIInputSystem';
 import type { UIRenderDataProvider } from './systems/UIRenderDataProvider';

@@ -6,7 +6,7 @@
  * 提供可视化脚本运行时支持。
  */
 
-import type { IPlugin, ModuleManifest, IRuntimeModule } from '@esengine/engine-core';
+import type { IRuntimePlugin, ModuleManifest, IRuntimeModule } from '@esengine/engine-core';
 
 /**
  * Blueprint Runtime Module.
@@ -54,7 +54,7 @@ const manifest: ModuleManifest = {
  * Blueprint Plugin.
  * 蓝图插件。
  */
-export const BlueprintPlugin: IPlugin = {
+export const BlueprintPlugin: IRuntimePlugin = {
     manifest,
     runtimeModule: new BlueprintRuntimeModule()
 };

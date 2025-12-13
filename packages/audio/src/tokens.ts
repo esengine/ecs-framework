@@ -12,7 +12,7 @@
  * This file is reserved for potential future AudioManager service.
  */
 
-// import { createServiceToken } from '@esengine/engine-core';
+// import { createServiceToken } from '@esengine/ecs-framework';
 
 // ============================================================================
 // Reserved for future service tokens

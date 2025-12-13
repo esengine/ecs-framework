@@ -6,10 +6,12 @@
 
 import { Component } from '../Component';
 import { ComponentType } from '../Core/ComponentStorage';
-import { getComponentTypeName } from '../Decorators';
+import { getComponentTypeName, isEntityRefProperty } from '../Decorators';
 import {
     getSerializationMetadata
 } from './SerializationDecorators';
+import type { Entity } from '../Entity';
+import type { SerializationContext, SerializedEntityRef } from './SerializationContext';
 
 /**
  * 可序列化的值类型
@@ -24,7 +26,8 @@ export type SerializableValue =
     | { [key: string]: SerializableValue }
     | { __type: 'Date'; value: string }
     | { __type: 'Map'; value: Array<[SerializableValue, SerializableValue]> }
-    | { __type: 'Set'; value: SerializableValue[] };
+    | { __type: 'Set'; value: SerializableValue[] }
+    | { __entityRef: SerializedEntityRef };
 
 /**
  * 序列化后的组件数据
@@ -71,17 +74,25 @@ export class ComponentSerializer {
         // 序列化标记的字段
         for (const [fieldName, options] of metadata.fields) {
             const fieldKey = typeof fieldName === 'symbol' ? fieldName.toString() : fieldName;
-            const value = (component as unknown as Record<string | symbol, SerializableValue>)[fieldName];
+            const value = (component as unknown as Record<string | symbol, unknown>)[fieldName];
 
             // 跳过忽略的字段
             if (metadata.ignoredFields.has(fieldName)) {
                 continue;
             }
 
-            // 使用自定义序列化器或默认序列化
-            const serializedValue = options.serializer
-                ? options.serializer(value)
-                : this.serializeValue(value);
+            let serializedValue: SerializableValue;
+
+            // 检查是否为 EntityRef 属性
+            if (isEntityRefProperty(component, fieldKey)) {
+                serializedValue = this.serializeEntityRef(value as Entity | null);
+            } else if (options.serializer) {
+                // 使用自定义序列化器
+                serializedValue = options.serializer(value);
+            } else {
+                // 使用默认序列化
+                serializedValue = this.serializeValue(value as SerializableValue);
+            }
 
             // 使用别名或原始字段名
             const key = options.alias || fieldKey;
@@ -100,11 +111,13 @@ export class ComponentSerializer {
      *
      * @param serializedData 序列化的组件数据
      * @param componentRegistry 组件类型注册表 (类型名 -> 构造函数)
+     * @param context 序列化上下文（可选，用于解析 EntityRef）
      * @returns 反序列化后的组件实例，如果失败则返回null
      */
     public static deserialize(
         serializedData: SerializedComponent,
-        componentRegistry: Map<string, ComponentType>
+        componentRegistry: Map<string, ComponentType>,
+        context?: SerializationContext
     ): Component | null {
         const componentClass = componentRegistry.get(serializedData.type);
 
@@ -131,6 +144,18 @@ export class ComponentSerializer {
 
             if (serializedValue === undefined) {
                 continue; // 字段不存在于序列化数据中
+            }
+
+            // 检查是否为序列化的 EntityRef
+            if (this.isSerializedEntityRef(serializedValue)) {
+                // EntityRef 需要延迟解析
+                if (context) {
+                    const ref = serializedValue.__entityRef;
+                    context.registerPendingRef(component, fieldKey, ref.id, ref.guid);
+                }
+                // 暂时设为 null，后续由 context.resolveAllReferences() 填充
+                (component as unknown as Record<string | symbol, unknown>)[fieldName] = null;
+                continue;
             }
 
             // 使用自定义反序列化器或默认反序列化
@@ -168,16 +193,18 @@ export class ComponentSerializer {
      *
      * @param serializedComponents 序列化的组件数据数组
      * @param componentRegistry 组件类型注册表
+     * @param context 序列化上下文（可选，用于解析 EntityRef）
      * @returns 反序列化后的组件数组
      */
     public static deserializeComponents(
         serializedComponents: SerializedComponent[],
-        componentRegistry: Map<string, ComponentType>
+        componentRegistry: Map<string, ComponentType>,
+        context?: SerializationContext
     ): Component[] {
         const result: Component[] = [];
 
         for (const serialized of serializedComponents) {
-            const component = this.deserialize(serialized, componentRegistry);
+            const component = this.deserialize(serialized, componentRegistry, context);
             if (component) {
                 result.push(component);
             }
@@ -348,5 +375,42 @@ export class ComponentSerializer {
             ),
             isSerializable: true
         };
+    }
+
+    /**
+     * 序列化 Entity 引用
+     *
+     * Serialize an Entity reference to a portable format.
+     *
+     * @param entity Entity 实例或 null
+     * @returns 序列化的引用格式
+     */
+    public static serializeEntityRef(entity: Entity | null): SerializableValue {
+        if (!entity) {
+            return null;
+        }
+
+        return {
+            __entityRef: {
+                id: entity.id,
+                guid: entity.persistentId
+            }
+        };
+    }
+
+    /**
+     * 检查值是否为序列化的 EntityRef
+     *
+     * Check if a value is a serialized EntityRef.
+     *
+     * @param value 要检查的值
+     * @returns 如果是 EntityRef 返回 true
+     */
+    public static isSerializedEntityRef(value: unknown): value is { __entityRef: SerializedEntityRef } {
+        return (
+            typeof value === 'object' &&
+            value !== null &&
+            '__entityRef' in value
+        );
     }
 }

@@ -2,14 +2,17 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import {
     RotateCcw, Maximize2, Grid3x3, Eye, EyeOff, Activity,
     MousePointer2, Move, RotateCw, Scaling, Globe, QrCode, ChevronDown,
-    Magnet, ZoomIn
+    Magnet, ZoomIn, Save, X, PackageOpen
 } from 'lucide-react';
 import '../styles/Viewport.css';
 import { useEngine } from '../hooks/useEngine';
 import { useLocale } from '../hooks/useLocale';
 import { EngineService } from '../services/EngineService';
-import { Core, Entity, SceneSerializer } from '@esengine/ecs-framework';
-import { MessageHub, ProjectService, AssetRegistryService } from '@esengine/editor-core';
+import { Core, Entity, SceneSerializer, PrefabSerializer, ComponentRegistry } from '@esengine/ecs-framework';
+import type { PrefabData, ComponentType } from '@esengine/ecs-framework';
+import { MessageHub, ProjectService, AssetRegistryService, EntityStoreService, CommandManager, SceneManagerService } from '@esengine/editor-core';
+import { InstantiatePrefabCommand } from '../application/commands/prefab/InstantiatePrefabCommand';
+import { TransformCommand, type TransformState, type TransformOperationType } from '../application/commands';
 import { TransformComponent } from '@esengine/engine-core';
 import { CameraComponent } from '@esengine/camera';
 import { UITransformComponent } from '@esengine/ui';
@@ -17,6 +20,7 @@ import { TauriAPI } from '../api/tauri';
 import { open } from '@tauri-apps/plugin-shell';
 import { RuntimeResolver } from '../services/RuntimeResolver';
 import { QRCodeDialog } from './QRCodeDialog';
+import { collectAssetReferences } from '@esengine/asset-system';
 
 import type { ModuleManifest } from '../services/RuntimeResolver';
 
@@ -52,39 +56,53 @@ function generateRuntimeHtml(importMap: Record<string, string>, modules: ModuleM
 
     // Generate user runtime loading code
     // 生成用户运行时加载代码
+    // Now we only load @esengine/sdk as a single global
+    // 现在只加载 @esengine/sdk 作为单一全局变量
     const userRuntimeCode = hasUserRuntime ? `
             updateLoading('Loading user scripts...');
             try {
-                // Import ECS framework and set up global for user-runtime.js shim
-                // 导入 ECS 框架并为 user-runtime.js 设置全局变量
-                const ecsFramework = await import('@esengine/ecs-framework');
-                window.__ESENGINE__ = window.__ESENGINE__ || {};
-                window.__ESENGINE__.ecsFramework = ecsFramework;
+                // Load unified SDK and set global
+                // 加载统一 SDK 并设置全局变量
+                console.log('[Preview] Loading @esengine/sdk...');
+                const sdk = await import('@esengine/sdk');
+                window.__ESENGINE_SDK__ = sdk;
+                console.log('[Preview] SDK loaded successfully');
+
+                // Check SDK is valid
+                // 检查 SDK 是否有效
+                if (!sdk.Component || !sdk.ComponentRegistry) {
+                    throw new Error('SDK missing critical exports (Component, ComponentRegistry)');
+                }
 
                 // Load user-runtime.js which contains compiled user components
                 // 加载 user-runtime.js，其中包含编译的用户组件
+                console.log('[Preview] Loading user-runtime.js...');
                 const userRuntimeScript = document.createElement('script');
                 userRuntimeScript.src = './user-runtime.js?_=' + Date.now();
                 await new Promise((resolve, reject) => {
                     userRuntimeScript.onload = resolve;
-                    userRuntimeScript.onerror = reject;
+                    userRuntimeScript.onerror = (e) => reject(new Error('Failed to load user-runtime.js: ' + e.message));
                     document.head.appendChild(userRuntimeScript);
                 });
+                console.log('[Preview] user-runtime.js loaded successfully');
 
                 // Register user components to ComponentRegistry
                 // 将用户组件注册到 ComponentRegistry
                 if (window.__USER_RUNTIME_EXPORTS__) {
-                    const { ComponentRegistry, Component } = ecsFramework;
+                    const { ComponentRegistry, Component } = window.__ESENGINE_SDK__;
                     const exports = window.__USER_RUNTIME_EXPORTS__;
-                    for (const [name, exported] of Object.entries(exports)) {
-                        if (typeof exported === 'function' && exported.prototype instanceof Component) {
-                            ComponentRegistry.register(exported);
-                            console.log('[Preview] Registered user component:', name);
+                    if (ComponentRegistry && Component) {
+                        for (const [name, exported] of Object.entries(exports)) {
+                            if (typeof exported === 'function' && exported.prototype instanceof Component) {
+                                ComponentRegistry.register(exported);
+                                console.log('[Preview] Registered user component:', name);
+                            }
                         }
                     }
                 }
             } catch (e) {
-                console.warn('[Preview] Failed to load user scripts:', e.message);
+                console.error('[Preview] Failed to load user scripts:', e.message, e);
+                throw e; // Re-throw to show error in UI
             }
 ` : '';
 
@@ -146,12 +164,13 @@ ${importMapScript}
         const errorTitle = document.getElementById('error-title');
         const errorMessage = document.getElementById('error-message');
 
-        function showError(title, msg) {
+        function showError(title, msg, error) {
             loading.style.display = 'none';
             errorTitle.textContent = title || 'Failed to start';
-            errorMessage.textContent = msg;
+            const stack = error?.stack || '';
+            errorMessage.textContent = msg + (stack ? '\\n\\nStack:\\n' + stack : '');
             errorDiv.classList.add('show');
-            console.error('[Preview]', msg);
+            console.error('[Preview]', msg, error || '');
         }
 
         function updateLoading(msg) {
@@ -191,7 +210,7 @@ ${userRuntimeCode}
             });
             console.log('[Preview] Started successfully');
         } catch (error) {
-            showError(null, error.message || String(error));
+            showError(null, error.message || String(error), error);
         }
     </script>
 </body>
@@ -205,9 +224,10 @@ export type PlayState = 'stopped' | 'playing' | 'paused';
 interface ViewportProps {
   locale?: string;
   messageHub?: MessageHub;
+  commandManager?: CommandManager;
 }
 
-export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
+export function Viewport({ locale = 'en', messageHub, commandManager }: ViewportProps) {
     const { t } = useLocale();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -220,6 +240,13 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
     const [showQRDialog, setShowQRDialog] = useState(false);
     const [devicePreviewUrl, setDevicePreviewUrl] = useState('');
     const runMenuRef = useRef<HTMLDivElement>(null);
+
+    // Prefab edit mode state | 预制体编辑模式状态
+    const [prefabEditMode, setPrefabEditMode] = useState<{
+        isActive: boolean;
+        prefabName: string;
+        prefabPath: string;
+    } | null>(null);
 
     // Snap settings
     const [snapEnabled, setSnapEnabled] = useState(true);
@@ -237,10 +264,15 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
     const editorCameraRef = useRef({ x: 0, y: 0, zoom: 1 });
     const playStateRef = useRef<PlayState>('stopped');
 
-    // Keep ref in sync with state
-    useEffect(() => {
-        playStateRef.current = playState;
-    }, [playState]);
+    // Live transform display state | 实时变换显示状态
+    const [liveTransform, setLiveTransform] = useState<{
+        type: 'move' | 'rotate' | 'scale';
+        x: number;
+        y: number;
+        rotation?: number;
+        scaleX?: number;
+        scaleY?: number;
+    } | null>(null);
 
     // Rust engine hook with multi-viewport support
     const engine = useEngine({
@@ -261,40 +293,28 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
     const lastMousePosRef = useRef({ x: 0, y: 0 });
     const selectedEntityRef = useRef<Entity | null>(null);
     const messageHubRef = useRef<MessageHub | null>(null);
+    const commandManagerRef = useRef<CommandManager | null>(null);
     const transformModeRef = useRef<TransformMode>('select');
+    // Initial transform state for undo/redo | 用于撤销/重做的初始变换状态
+    const initialTransformStateRef = useRef<TransformState | null>(null);
+    const transformComponentRef = useRef<TransformComponent | UITransformComponent | null>(null);
     const snapEnabledRef = useRef(true);
     const gridSnapRef = useRef(10);
     const rotationSnapRef = useRef(15);
     const scaleSnapRef = useRef(0.25);
 
-    // Keep refs in sync with state
+    // Keep refs in sync with state for stable event handler closures
+    // 保持 refs 与 state 同步，以便事件处理器闭包稳定
     useEffect(() => {
+        playStateRef.current = playState;
         camera2DZoomRef.current = camera2DZoom;
-    }, [camera2DZoom]);
-
-    useEffect(() => {
         camera2DOffsetRef.current = camera2DOffset;
-    }, [camera2DOffset]);
-
-    useEffect(() => {
         transformModeRef.current = transformMode;
-    }, [transformMode]);
-
-    useEffect(() => {
         snapEnabledRef.current = snapEnabled;
-    }, [snapEnabled]);
-
-    useEffect(() => {
         gridSnapRef.current = gridSnapValue;
-    }, [gridSnapValue]);
-
-    useEffect(() => {
         rotationSnapRef.current = rotationSnapValue;
-    }, [rotationSnapValue]);
-
-    useEffect(() => {
         scaleSnapRef.current = scaleSnapValue;
-    }, [scaleSnapValue]);
+    }, [playState, camera2DZoom, camera2DOffset, transformMode, snapEnabled, gridSnapValue, rotationSnapValue, scaleSnapValue]);
 
     // Snap helper functions
     const snapToGrid = useCallback((value: number): number => {
@@ -350,6 +370,11 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
             return () => unsub();
         }
     }, []);
+
+    // Sync commandManager prop to ref | 同步 commandManager prop 到 ref
+    useEffect(() => {
+        commandManagerRef.current = commandManager ?? null;
+    }, [commandManager]);
 
     // Canvas setup and input handling
     useEffect(() => {
@@ -415,6 +440,21 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                     // In transform mode, left click transforms entity
                     isDraggingTransformRef.current = true;
                     canvas.style.cursor = 'move';
+
+                    // Capture initial transform state for undo/redo
+                    // 捕获初始变换状态用于撤销/重做
+                    const entity = selectedEntityRef.current;
+                    if (entity) {
+                        const transform = entity.getComponent(TransformComponent);
+                        const uiTransform = entity.getComponent(UITransformComponent);
+                        if (transform) {
+                            initialTransformStateRef.current = TransformCommand.captureTransformState(transform);
+                            transformComponentRef.current = transform;
+                        } else if (uiTransform) {
+                            initialTransformStateRef.current = TransformCommand.captureUITransformState(uiTransform);
+                            transformComponentRef.current = uiTransform;
+                        }
+                    }
                 }
                 lastMousePosRef.current = { x: e.clientX, y: e.clientY };
                 e.preventDefault();
@@ -468,6 +508,16 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                         }
                     }
 
+                    // Update live transform display | 更新实时变换显示
+                    setLiveTransform({
+                        type: mode as 'move' | 'rotate' | 'scale',
+                        x: transform.position.x,
+                        y: transform.position.y,
+                        rotation: transform.rotation.z * 180 / Math.PI,
+                        scaleX: transform.scale.x,
+                        scaleY: transform.scale.y
+                    });
+
                     if (messageHubRef.current) {
                         const propertyName = mode === 'move' ? 'position' : mode === 'rotate' ? 'rotation' : 'scale';
                         const value = propertyName === 'position' ? transform.position :
@@ -517,6 +567,16 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                         }
                     }
 
+                    // Update live transform display for UI | 更新 UI 的实时变换显示
+                    setLiveTransform({
+                        type: mode as 'move' | 'rotate' | 'scale',
+                        x: uiTransform.x,
+                        y: uiTransform.y,
+                        rotation: uiTransform.rotation * 180 / Math.PI,
+                        scaleX: uiTransform.scaleX,
+                        scaleY: uiTransform.scaleY
+                    });
+
                     if (messageHubRef.current) {
                         const propertyName = mode === 'move' ? 'x' : mode === 'rotate' ? 'rotation' : 'scaleX';
                         messageHubRef.current.publish('component:property:changed', {
@@ -542,6 +602,8 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
             if (isDraggingTransformRef.current) {
                 isDraggingTransformRef.current = false;
                 canvas.style.cursor = 'grab';
+                // Clear live transform display | 清除实时变换显示
+                setLiveTransform(null);
 
                 // Apply snap on mouse up
                 const entity = selectedEntityRef.current;
@@ -573,6 +635,36 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                         }
                     }
                 }
+
+                // Create TransformCommand for undo/redo | 创建变换命令用于撤销/重做
+                const initialState = initialTransformStateRef.current;
+                const component = transformComponentRef.current;
+                const hub = messageHubRef.current;
+                const cmdManager = commandManagerRef.current;
+
+                if (entity && initialState && component && hub && cmdManager) {
+                    const mode = transformModeRef.current as TransformOperationType;
+                    let newState: TransformState;
+
+                    if (component instanceof TransformComponent) {
+                        newState = TransformCommand.captureTransformState(component);
+                    } else {
+                        newState = TransformCommand.captureUITransformState(component as UITransformComponent);
+                    }
+
+                    // Only create command if state actually changed | 只有状态实际改变时才创建命令
+                    const hasChanged = JSON.stringify(initialState) !== JSON.stringify(newState);
+                    if (hasChanged) {
+                        const cmd = new TransformCommand(hub, entity, component, mode, initialState, newState);
+                        // Push to undo stack without re-executing (already applied during drag)
+                        // 推入撤销栈但不重新执行（拖动时已应用）
+                        cmdManager.pushWithoutExecute(cmd);
+                    }
+                }
+
+                // Clear refs | 清除引用
+                initialTransformStateRef.current = null;
+                transformComponentRef.current = null;
 
                 // Notify Inspector to refresh after transform change
                 if (messageHubRef.current && selectedEntityRef.current) {
@@ -839,8 +931,8 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                 await TauriAPI.createDirectory(assetsDir);
             }
 
-            // Collect all asset paths from scene
-            // 从场景中收集所有资产路径
+            // Collect all asset references from scene using generic collector
+            // 使用通用收集器从场景中收集所有资产引用
             const sceneObj = JSON.parse(sceneData);
             const assetPaths = new Set<string>();
             // GUID 到路径的映射，用于需要通过 GUID 加载的资产
@@ -850,69 +942,65 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
             // Get asset registry for resolving GUIDs
             const assetRegistry = Core.services.tryResolve(AssetRegistryService);
 
-            // Scan all components for asset references
-            if (sceneObj.entities) {
-                for (const entity of sceneObj.entities) {
-                    if (entity.components) {
-                        for (const comp of entity.components) {
-                            // Sprite textures
-                            if (comp.type === 'Sprite' && comp.data?.texture) {
-                                assetPaths.add(comp.data.texture);
-                            }
-                            // Behavior tree assets
-                            if (comp.type === 'BehaviorTreeRuntime' && comp.data?.treeAssetId) {
-                                assetPaths.add(comp.data.treeAssetId);
-                            }
-                            // Tilemap assets
-                            if (comp.type === 'Tilemap' && comp.data?.tmxPath) {
-                                assetPaths.add(comp.data.tmxPath);
-                            }
-                            // Audio assets
-                            if (comp.type === 'AudioSource' && comp.data?.clip) {
-                                assetPaths.add(comp.data.clip);
-                            }
-                            // Particle assets - resolve GUID to path
-                            if (comp.type === 'ParticleSystem' && comp.data?.particleAssetGuid) {
-                                const guid = comp.data.particleAssetGuid;
-                                if (assetRegistry) {
-                                    const relativePath = assetRegistry.getPathByGuid(guid);
-                                    if (relativePath && projectPath) {
-                                        // Convert relative path to absolute path
-                                        // 将相对路径转换为绝对路径
-                                        const absolutePath = `${projectPath}\\${relativePath.replace(/\//g, '\\')}`;
-                                        assetPaths.add(absolutePath);
-                                        guidToPath.set(guid, absolutePath);
+            // Use generic asset collector to find all asset references
+            // 使用通用资产收集器找到所有资产引用
+            const assetReferences = collectAssetReferences(sceneObj);
 
-                                        // Also check for texture referenced in particle asset
-                                        // 同时检查粒子资产中引用的纹理
-                                        try {
-                                            const particleContent = await TauriAPI.readFileContent(absolutePath);
-                                            const particleData = JSON.parse(particleContent);
-                                            const textureRef = particleData.textureGuid || particleData.texturePath;
-                                            if (textureRef) {
-                                                // Check if it's a GUID or a path
-                                                if (textureRef.includes('-') && textureRef.length > 30) {
-                                                    // Looks like a GUID
-                                                    const textureRelPath = assetRegistry.getPathByGuid(textureRef);
-                                                    if (textureRelPath && projectPath) {
-                                                        const textureAbsPath = `${projectPath}\\${textureRelPath.replace(/\//g, '\\')}`;
-                                                        assetPaths.add(textureAbsPath);
-                                                        guidToPath.set(textureRef, textureAbsPath);
-                                                    }
-                                                } else {
-                                                    // It's a path
-                                                    const textureAbsPath = `${projectPath}\\${textureRef.replace(/\//g, '\\')}`;
-                                                    assetPaths.add(textureAbsPath);
-                                                }
-                                            }
-                                        } catch {
-                                            // Ignore parse errors
-                                        }
-                                    }
-                                }
+            // Helper: check if value looks like a GUID
+            const isGuidLike = (value: string) =>
+                value.includes('-') && value.length >= 30 && value.length <= 40;
+
+            // Helper: resolve GUID to absolute path
+            const resolveGuidToPath = (guid: string): string | null => {
+                if (!assetRegistry || !projectPath) return null;
+                const relativePath = assetRegistry.getPathByGuid(guid);
+                if (!relativePath) return null;
+                return `${projectPath}\\${relativePath.replace(/\//g, '\\')}`;
+            };
+
+            // Helper: load particle asset and extract texture references
+            const loadParticleTextures = async (particlePath: string) => {
+                try {
+                    const particleContent = await TauriAPI.readFileContent(particlePath);
+                    const particleData = JSON.parse(particleContent);
+                    const textureRef = particleData.textureGuid || particleData.texturePath;
+                    if (textureRef) {
+                        if (isGuidLike(textureRef)) {
+                            const texturePath = resolveGuidToPath(textureRef);
+                            if (texturePath) {
+                                assetPaths.add(texturePath);
+                                guidToPath.set(textureRef, texturePath);
                             }
+                        } else if (projectPath) {
+                            const texturePath = `${projectPath}\\${textureRef.replace(/\//g, '\\')}`;
+                            assetPaths.add(texturePath);
                         }
                     }
+                } catch {
+                    // Ignore parse errors
+                }
+            };
+
+            // Process collected asset references
+            // 处理收集的资产引用
+            for (const ref of assetReferences) {
+                const value = ref.guid;
+
+                // Check if it's a GUID that needs resolution
+                if (isGuidLike(value)) {
+                    const absolutePath = resolveGuidToPath(value);
+                    if (absolutePath) {
+                        assetPaths.add(absolutePath);
+                        guidToPath.set(value, absolutePath);
+
+                        // If it's a particle asset, also load its texture references
+                        if (absolutePath.endsWith('.particle') || absolutePath.endsWith('.particle.json')) {
+                            await loadParticleTextures(absolutePath);
+                        }
+                    }
+                } else {
+                    // It's a direct path
+                    assetPaths.add(value);
                 }
             }
 
@@ -931,9 +1019,11 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                     }
 
                     // Get filename and determine relative path
+                    // 路径格式：相对于 assets 目录，不包含 'assets/' 前缀
+                    // Path format: relative to assets directory, without 'assets/' prefix
                     const filename = assetPath.split(/[/\\]/).pop() || '';
                     const destPath = `${assetsDir}\\${filename}`;
-                    const relativePath = `assets/${filename}`;
+                    const relativePath = filename;
 
                     // Copy file
                     await TauriAPI.copyFile(assetPath, destPath);
@@ -1200,6 +1290,68 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
         };
     }, [messageHub]);
 
+    // Subscribe to prefab edit mode changes | 监听预制体编辑模式变化
+    useEffect(() => {
+        if (!messageHub) return;
+
+        const unsubscribePrefabEditMode = messageHub.subscribe('prefab:editMode:changed', (data: {
+            isActive: boolean;
+            prefabPath?: string;
+            prefabName?: string;
+        }) => {
+            if (data.isActive && data.prefabName && data.prefabPath) {
+                setPrefabEditMode({
+                    isActive: true,
+                    prefabName: data.prefabName,
+                    prefabPath: data.prefabPath
+                });
+            } else {
+                setPrefabEditMode(null);
+            }
+        });
+
+        // Check initial prefab edit mode state | 检查初始预制体编辑模式状态
+        const sceneManager = Core.services.tryResolve(SceneManagerService);
+        if (sceneManager) {
+            const prefabState = sceneManager.getPrefabEditModeState?.();
+            if (prefabState?.isActive) {
+                setPrefabEditMode({
+                    isActive: true,
+                    prefabName: prefabState.prefabName,
+                    prefabPath: prefabState.prefabPath
+                });
+            }
+        }
+
+        return () => {
+            unsubscribePrefabEditMode();
+        };
+    }, [messageHub]);
+
+    // Handle prefab save | 处理预制体保存
+    const handleSavePrefab = useCallback(async () => {
+        const sceneManager = Core.services.tryResolve(SceneManagerService);
+        if (sceneManager?.isPrefabEditMode?.()) {
+            try {
+                await sceneManager.savePrefab();
+            } catch (error) {
+                console.error('Failed to save prefab:', error);
+            }
+        }
+    }, []);
+
+    // Handle exit prefab edit mode | 处理退出预制体编辑模式
+    const handleExitPrefabEditMode = useCallback(async (save: boolean = false) => {
+        const sceneManager = Core.services.tryResolve(SceneManagerService);
+        if (sceneManager?.isPrefabEditMode?.()) {
+            try {
+                await sceneManager.exitPrefabEditMode(save);
+            } catch (error) {
+                console.error('Failed to exit prefab edit mode:', error);
+            }
+        }
+    }, []);
+
     const handleFullscreen = () => {
         if (containerRef.current) {
             if (document.fullscreenElement) {
@@ -1271,8 +1423,110 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    /**
+     * 处理视口拖放（用于预制体实例化）
+     * Handle viewport drag-drop (for prefab instantiation)
+     */
+    const handleViewportDragOver = useCallback((e: React.DragEvent) => {
+        const hasAssetPath = e.dataTransfer.types.includes('asset-path');
+        if (hasAssetPath) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+        }
+    }, []);
+
+    const handleViewportDrop = useCallback(async (e: React.DragEvent) => {
+        const assetPath = e.dataTransfer.getData('asset-path');
+        if (!assetPath || !assetPath.toLowerCase().endsWith('.prefab')) {
+            return;
+        }
+
+        e.preventDefault();
+
+        try {
+            // 读取预制体文件 | Read prefab file
+            const prefabJson = await TauriAPI.readFileContent(assetPath);
+            const prefabData = PrefabSerializer.deserialize(prefabJson);
+
+            // 获取服务 | Get services
+            const entityStore = Core.services.tryResolve(EntityStoreService) as EntityStoreService | null;
+
+            if (!entityStore || !messageHub || !commandManager) {
+                console.error('[Viewport] Required services not available');
+                return;
+            }
+
+            // 计算放置位置（将屏幕坐标转换为世界坐标）| Calculate drop position (convert screen to world)
+            const canvas = canvasRef.current;
+            let worldPos = { x: 0, y: 0 };
+            if (canvas) {
+                const rect = canvas.getBoundingClientRect();
+                const dpr = window.devicePixelRatio || 1;
+                const screenX = e.clientX - rect.left;
+                const screenY = e.clientY - rect.top;
+                const canvasX = screenX * dpr;
+                const canvasY = screenY * dpr;
+                const centeredX = canvasX - canvas.width / 2;
+                const centeredY = canvas.height / 2 - canvasY;
+                worldPos = {
+                    x: centeredX / camera2DZoomRef.current - camera2DOffsetRef.current.x,
+                    y: centeredY / camera2DZoomRef.current - camera2DOffsetRef.current.y
+                };
+            }
+
+            // 创建实例化命令 | Create instantiate command
+            const command = new InstantiatePrefabCommand(
+                entityStore,
+                messageHub,
+                prefabData,
+                {
+                    position: worldPos,
+                    trackInstance: true
+                }
+            );
+            commandManager.execute(command);
+
+            console.log(`[Viewport] Prefab instantiated at (${worldPos.x.toFixed(0)}, ${worldPos.y.toFixed(0)}): ${prefabData.metadata.name}`);
+        } catch (error) {
+            console.error('[Viewport] Failed to instantiate prefab:', error);
+        }
+    }, [messageHub, commandManager]);
+
     return (
-        <div className="viewport" ref={containerRef}>
+        <div
+            className={`viewport ${prefabEditMode?.isActive ? 'prefab-edit-mode' : ''}`}
+            ref={containerRef}
+            onDragOver={handleViewportDragOver}
+            onDrop={handleViewportDrop}
+        >
+            {/* Prefab Edit Mode Toolbar | 预制体编辑模式工具栏 */}
+            {prefabEditMode?.isActive && (
+                <div className="viewport-prefab-toolbar">
+                    <div className="viewport-prefab-toolbar-left">
+                        <PackageOpen size={14} />
+                        <span className="prefab-name">{t('viewport.prefab.editing') || 'Editing'}: {prefabEditMode.prefabName}</span>
+                    </div>
+                    <div className="viewport-prefab-toolbar-right">
+                        <button
+                            className="viewport-prefab-btn save"
+                            onClick={handleSavePrefab}
+                            title={t('viewport.prefab.save') || 'Save Prefab'}
+                        >
+                            <Save size={14} />
+                            <span>{t('viewport.prefab.save') || 'Save'}</span>
+                        </button>
+                        <button
+                            className="viewport-prefab-btn exit"
+                            onClick={() => handleExitPrefabEditMode(false)}
+                            title={t('viewport.prefab.exit') || 'Exit Edit Mode'}
+                        >
+                            <X size={14} />
+                            <span>{t('viewport.prefab.exit') || 'Exit'}</span>
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Internal Overlay Toolbar */}
             <div className="viewport-internal-toolbar">
                 <div className="viewport-internal-toolbar-left">
@@ -1501,6 +1755,34 @@ export function Viewport({ locale = 'en', messageHub }: ViewportProps) {
                             <span className="viewport-stat-label">Error:</span>
                             <span className="viewport-stat-value">{engine.state.error}</span>
                         </div>
+                    )}
+                </div>
+            )}
+
+            {/* Live Transform Display | 实时变换显示 */}
+            {liveTransform && (
+                <div className="viewport-live-transform">
+                    {liveTransform.type === 'move' && (
+                        <>
+                            <span className="live-transform-label">X:</span>
+                            <span className="live-transform-value">{liveTransform.x.toFixed(1)}</span>
+                            <span className="live-transform-label">Y:</span>
+                            <span className="live-transform-value">{liveTransform.y.toFixed(1)}</span>
+                        </>
+                    )}
+                    {liveTransform.type === 'rotate' && (
+                        <>
+                            <span className="live-transform-label">R:</span>
+                            <span className="live-transform-value">{liveTransform.rotation?.toFixed(1)}°</span>
+                        </>
+                    )}
+                    {liveTransform.type === 'scale' && (
+                        <>
+                            <span className="live-transform-label">SX:</span>
+                            <span className="live-transform-value">{liveTransform.scaleX?.toFixed(2)}</span>
+                            <span className="live-transform-label">SY:</span>
+                            <span className="live-transform-value">{liveTransform.scaleY?.toFixed(2)}</span>
+                        </>
                     )}
                 </div>
             )}

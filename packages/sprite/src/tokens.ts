@@ -3,7 +3,7 @@
  * Sprite module service tokens
  */
 
-import { createServiceToken } from '@esengine/engine-core';
+import { createServiceToken } from '@esengine/ecs-framework';
 import type { SpriteAnimatorSystem } from './systems/SpriteAnimatorSystem';
 
 // ============================================================================

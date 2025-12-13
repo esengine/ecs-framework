@@ -4,8 +4,8 @@
  */
 
 import { Serialize, Serializable, ECSComponent } from '@esengine/ecs-framework';
+import type { IVector2 } from '@esengine/ecs-framework-math';
 import { Collider2DBase } from './Collider2DBase';
-import type { Vector2 } from '../types/Physics2DTypes';
 
 /**
  * 2D 多边形碰撞体
@@ -32,7 +32,7 @@ export class PolygonCollider2DComponent extends Collider2DBase {
      * 最少3个，最多不超过引擎限制（通常是 8-16 个）
      */
     @Serialize()
-    public vertices: Vector2[] = [
+    public vertices: IVector2[] = [
         { x: -5, y: -5 },
         { x: 5, y: -5 },
         { x: 5, y: 5 },
@@ -59,7 +59,7 @@ export class PolygonCollider2DComponent extends Collider2DBase {
         return Math.abs(area) / 2;
     }
 
-    public override calculateAABB(): { min: Vector2; max: Vector2 } {
+    public override calculateAABB(): { min: IVector2; max: IVector2 } {
         if (this.vertices.length === 0) {
             return {
                 min: { x: this.offset.x, y: this.offset.y },
@@ -89,7 +89,7 @@ export class PolygonCollider2DComponent extends Collider2DBase {
      * 设置顶点
      * @param vertices 顶点数组（逆时针顺序）
      */
-    public setVertices(vertices: Vector2[]): void {
+    public setVertices(vertices: IVector2[]): void {
         if (vertices.length < 3) {
             console.warn('PolygonCollider2D: 至少需要3个顶点');
             return;
@@ -109,7 +109,7 @@ export class PolygonCollider2DComponent extends Collider2DBase {
             return;
         }
 
-        const vertices: Vector2[] = [];
+        const vertices: IVector2[] = [];
         const angleStep = (Math.PI * 2) / sides;
 
         for (let i = 0; i < sides; i++) {

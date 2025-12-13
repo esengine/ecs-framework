@@ -4,15 +4,15 @@
  */
 
 import { EntitySystem, Matcher, Entity, ECSSystem } from '@esengine/ecs-framework';
-import { CameraComponent } from '@esengine/camera';
-import type { EngineBridge } from '../core/EngineBridge';
+import type { IEngineBridge } from '@esengine/engine-core';
+import { CameraComponent } from './CameraComponent';
 
 @ECSSystem('Camera', { updateOrder: -100 })
 export class CameraSystem extends EntitySystem {
-    private bridge: EngineBridge;
+    private bridge: IEngineBridge;
     private lastAppliedCameraId: number | null = null;
 
-    constructor(bridge: EngineBridge) {
+    constructor(bridge: IEngineBridge) {
         // Match entities with CameraComponent
         super(Matcher.empty().all(CameraComponent));
         this.bridge = bridge;

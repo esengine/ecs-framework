@@ -49,6 +49,7 @@ export * from './Services/AssetRegistryService';
 export * from './Services/IViewportService';
 export * from './Services/PreviewSceneService';
 export * from './Services/EditorViewportService';
+export * from './Services/PrefabService';
 
 // Build System | 构建系统
 export * from './Services/Build';

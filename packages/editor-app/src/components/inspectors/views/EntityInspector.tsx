@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Settings, ChevronDown, ChevronRight, X, Plus, Box, Search, Lock, Unlock } from 'lucide-react';
-import { Entity, Component, Core, getComponentDependencies, getComponentTypeName, getComponentInstanceTypeName } from '@esengine/ecs-framework';
-import { MessageHub, CommandManager, ComponentRegistry, ComponentActionRegistry, ComponentInspectorRegistry } from '@esengine/editor-core';
+import { Entity, Component, Core, getComponentDependencies, getComponentTypeName, getComponentInstanceTypeName, isComponentInstanceHiddenInInspector, PrefabInstanceComponent } from '@esengine/ecs-framework';
+import { MessageHub, CommandManager, ComponentRegistry, ComponentActionRegistry, ComponentInspectorRegistry, PrefabService } from '@esengine/editor-core';
 import { PropertyInspector } from '../../PropertyInspector';
 import { NotificationService } from '../../../services/NotificationService';
 import { RemoveComponentCommand, UpdateComponentCommand, AddComponentCommand } from '../../../application/commands/component';
+import { PrefabInstanceInfo } from '../common/PrefabInstanceInfo';
 import '../../../styles/EntityInspector.css';
 import * as LucideIcons from 'lucide-react';
 
@@ -35,19 +36,49 @@ interface EntityInspectorProps {
     messageHub: MessageHub;
     commandManager: CommandManager;
     componentVersion: number;
+    /** 是否锁定检视器 | Whether inspector is locked */
+    isLocked?: boolean;
+    /** 锁定状态变化回调 | Lock state change callback */
+    onLockChange?: (locked: boolean) => void;
 }
 
-export function EntityInspector({ entity, messageHub, commandManager, componentVersion }: EntityInspectorProps) {
-    const [expandedComponents, setExpandedComponents] = useState<Set<number>>(() => {
-        // 默认展开所有组件
-        return new Set(entity.components.map((_, index) => index));
+export function EntityInspector({
+    entity,
+    messageHub,
+    commandManager,
+    componentVersion,
+    isLocked = false,
+    onLockChange
+}: EntityInspectorProps) {
+    // 使用组件类型名追踪折叠状态（持久化到 localStorage）
+    // Use component type names to track collapsed state (persisted to localStorage)
+    const [collapsedComponentTypes, setCollapsedComponentTypes] = useState<Set<string>>(() => {
+        try {
+            const saved = localStorage.getItem('inspector-collapsed-components');
+            return saved ? new Set(JSON.parse(saved)) : new Set();
+        } catch {
+            return new Set();
+        }
     });
+
+    // 保存折叠状态到 localStorage | Save collapsed state to localStorage
+    useEffect(() => {
+        try {
+            localStorage.setItem(
+                'inspector-collapsed-components',
+                JSON.stringify([...collapsedComponentTypes])
+            );
+        } catch {
+            // Ignore localStorage errors
+        }
+    }, [collapsedComponentTypes]);
+
     const [showComponentMenu, setShowComponentMenu] = useState(false);
     const [localVersion, setLocalVersion] = useState(0);
     const [dropdownPosition, setDropdownPosition] = useState<{ top: number; right: number } | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
-    const [isLocked, setIsLocked] = useState(false);
+    const [selectedComponentIndex, setSelectedComponentIndex] = useState(-1);
     const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
     const [propertySearchQuery, setPropertySearchQuery] = useState('');
     const addButtonRef = useRef<HTMLButtonElement>(null);
@@ -56,29 +87,13 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
     const componentRegistry = Core.services.resolve(ComponentRegistry);
     const componentActionRegistry = Core.services.resolve(ComponentActionRegistry);
     const componentInspectorRegistry = Core.services.resolve(ComponentInspectorRegistry);
+    const prefabService = Core.services.tryResolve(PrefabService) as PrefabService | null;
     const availableComponents = (componentRegistry?.getAllComponents() || []) as ComponentInfo[];
 
-    // 当 entity 变化或组件数量变化时，更新展开状态（新组件默认展开）
-    // 注意：不要依赖 componentVersion，否则每次属性变化都会重置展开状态
-    useEffect(() => {
-        setExpandedComponents((prev) => {
-            const newSet = new Set(prev);
-            // 只添加新增组件的索引（保留已有的展开/收缩状态）
-            entity.components.forEach((_, index) => {
-                // 只有当索引不在集合中时才添加（即新组件）
-                if (!prev.has(index) && index >= prev.size) {
-                    newSet.add(index);
-                }
-            });
-            // 移除不存在的索引（组件被删除的情况）
-            for (const idx of prev) {
-                if (idx >= entity.components.length) {
-                    newSet.delete(idx);
-                }
-            }
-            return newSet;
-        });
-    }, [entity, entity.components.length]);
+    // 检查实体是否为预制体实例 | Check if entity is a prefab instance
+    const isPrefabInstance = useMemo(() => {
+        return entity.hasComponent(PrefabInstanceComponent);
+    }, [entity, componentVersion]);
 
     useEffect(() => {
         if (showComponentMenu && addButtonRef.current) {
@@ -121,6 +136,46 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
         return grouped;
     }, [availableComponents, searchQuery]);
 
+    // 创建扁平化的可见组件列表（用于键盘导航）
+    // Create flat list of visible components for keyboard navigation
+    const flatVisibleComponents = useMemo(() => {
+        const result: ComponentInfo[] = [];
+        for (const [category, components] of filteredAndGroupedComponents.entries()) {
+            const isCollapsed = collapsedCategories.has(category) && !searchQuery;
+            if (!isCollapsed) {
+                result.push(...components);
+            }
+        }
+        return result;
+    }, [filteredAndGroupedComponents, collapsedCategories, searchQuery]);
+
+    // 重置选中索引当搜索变化时 | Reset selected index when search changes
+    useEffect(() => {
+        setSelectedComponentIndex(searchQuery ? 0 : -1);
+    }, [searchQuery]);
+
+    // 处理组件搜索的键盘导航 | Handle keyboard navigation for component search
+    const handleComponentSearchKeyDown = useCallback((e: React.KeyboardEvent) => {
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setSelectedComponentIndex(prev =>
+                prev < flatVisibleComponents.length - 1 ? prev + 1 : prev
+            );
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setSelectedComponentIndex(prev => prev > 0 ? prev - 1 : 0);
+        } else if (e.key === 'Enter' && selectedComponentIndex >= 0) {
+            e.preventDefault();
+            const selectedComponent = flatVisibleComponents[selectedComponentIndex];
+            if (selectedComponent?.type) {
+                handleAddComponent(selectedComponent.type);
+            }
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            setShowComponentMenu(false);
+        }
+    }, [flatVisibleComponents, selectedComponentIndex]);
+
     const toggleCategory = (category: string) => {
         setCollapsedCategories(prev => {
             const next = new Set(prev);
@@ -130,13 +185,15 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
         });
     };
 
-    const toggleComponentExpanded = (index: number) => {
-        setExpandedComponents((prev) => {
+    const toggleComponentExpanded = (componentTypeName: string) => {
+        setCollapsedComponentTypes((prev) => {
             const newSet = new Set(prev);
-            if (newSet.has(index)) {
-                newSet.delete(index);
+            if (newSet.has(componentTypeName)) {
+                // 已折叠，展开它 | Was collapsed, expand it
+                newSet.delete(componentTypeName);
             } else {
-                newSet.add(index);
+                // 已展开，折叠它 | Was expanded, collapse it
+                newSet.add(componentTypeName);
             }
             return newSet;
         });
@@ -244,6 +301,12 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
 
     const filteredComponents = useMemo(() => {
         return entity.components.filter((component: Component) => {
+            // 过滤掉标记为隐藏的组件（如 Hierarchy, PrefabInstance）
+            // Filter out components marked as hidden (e.g., Hierarchy, PrefabInstance)
+            if (isComponentInstanceHiddenInInspector(component)) {
+                return false;
+            }
+
             const componentName = getComponentInstanceTypeName(component);
 
             if (categoryFilter !== 'all') {
@@ -271,7 +334,7 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
                 <div className="inspector-header-left">
                     <button
                         className={`inspector-lock-btn ${isLocked ? 'locked' : ''}`}
-                        onClick={() => setIsLocked(!isLocked)}
+                        onClick={() => onLockChange?.(!isLocked)}
                         title={isLocked ? '解锁检视器' : '锁定检视器'}
                     >
                         {isLocked ? <Lock size={14} /> : <Unlock size={14} />}
@@ -282,6 +345,16 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
                 <span className="inspector-object-count">1 object</span>
             </div>
 
+            {/* Prefab Instance Info | 预制体实例信息 */}
+            {isPrefabInstance && prefabService && (
+                <PrefabInstanceInfo
+                    entity={entity}
+                    prefabService={prefabService}
+                    messageHub={messageHub}
+                    commandManager={commandManager}
+                />
+            )}
+
             {/* Search Box */}
             <div className="inspector-search">
                 <Search size={14} />
@@ -290,7 +363,27 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
                     placeholder="Search..."
                     value={propertySearchQuery}
                     onChange={(e) => setPropertySearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Escape' && propertySearchQuery) {
+                            e.preventDefault();
+                            setPropertySearchQuery('');
+                        }
+                    }}
                 />
+                {propertySearchQuery && (
+                    <button
+                        className="inspector-search-clear"
+                        onClick={() => setPropertySearchQuery('')}
+                        title="Clear"
+                    >
+                        <X size={12} />
+                    </button>
+                )}
+                {propertySearchQuery && (
+                    <span className="inspector-search-count">
+                        {filteredComponents.length} / {entity.components.length}
+                    </span>
+                )}
             </div>
 
             {/* Category Tabs */}
@@ -335,6 +428,7 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
                                                 placeholder="搜索组件..."
                                                 value={searchQuery}
                                                 onChange={(e) => setSearchQuery(e.target.value)}
+                                                onKeyDown={handleComponentSearchKeyDown}
                                             />
                                         </div>
                                         {filteredAndGroupedComponents.size === 0 ? (
@@ -343,35 +437,45 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
                                             </div>
                                         ) : (
                                             <div className="component-dropdown-list">
-                                                {Array.from(filteredAndGroupedComponents.entries()).map(([category, components]) => {
-                                                    const isCollapsed = collapsedCategories.has(category) && !searchQuery;
-                                                    const label = categoryLabels[category] || category;
-                                                    return (
-                                                        <div key={category} className="component-category-group">
-                                                            <button
-                                                                className="component-category-header"
-                                                                onClick={() => toggleCategory(category)}
-                                                            >
-                                                                {isCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
-                                                                <span>{label}</span>
-                                                                <span className="component-category-count">{components.length}</span>
-                                                            </button>
-                                                            {!isCollapsed && components.map((info) => {
-                                                                const IconComp = info.icon && (LucideIcons as any)[info.icon];
-                                                                return (
-                                                                    <button
-                                                                        key={info.name}
-                                                                        className="component-dropdown-item"
-                                                                        onClick={() => info.type && handleAddComponent(info.type)}
-                                                                    >
-                                                                        {IconComp ? <IconComp size={14} /> : <Box size={14} />}
-                                                                        <span className="component-dropdown-item-name">{info.name}</span>
-                                                                    </button>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    );
-                                                })}
+                                                {(() => {
+                                                    let globalIndex = 0;
+                                                    return Array.from(filteredAndGroupedComponents.entries()).map(([category, components]) => {
+                                                        const isCollapsed = collapsedCategories.has(category) && !searchQuery;
+                                                        const label = categoryLabels[category] || category;
+                                                        const startIndex = globalIndex;
+                                                        if (!isCollapsed) {
+                                                            globalIndex += components.length;
+                                                        }
+                                                        return (
+                                                            <div key={category} className="component-category-group">
+                                                                <button
+                                                                    className="component-category-header"
+                                                                    onClick={() => toggleCategory(category)}
+                                                                >
+                                                                    {isCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
+                                                                    <span>{label}</span>
+                                                                    <span className="component-category-count">{components.length}</span>
+                                                                </button>
+                                                                {!isCollapsed && components.map((info, idx) => {
+                                                                    const IconComp = info.icon && (LucideIcons as any)[info.icon];
+                                                                    const itemIndex = startIndex + idx;
+                                                                    const isSelected = itemIndex === selectedComponentIndex;
+                                                                    return (
+                                                                        <button
+                                                                            key={info.name}
+                                                                            className={`component-dropdown-item ${isSelected ? 'selected' : ''}`}
+                                                                            onClick={() => info.type && handleAddComponent(info.type)}
+                                                                            onMouseEnter={() => setSelectedComponentIndex(itemIndex)}
+                                                                        >
+                                                                            {IconComp ? <IconComp size={14} /> : <Box size={14} />}
+                                                                            <span className="component-dropdown-item-name">{info.name}</span>
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        );
+                                                    });
+                                                })()}
                                             </div>
                                         )}
                                     </div>
@@ -386,8 +490,9 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
                     ) : (
                         filteredComponents.map((component: Component) => {
                             const originalIndex = entity.components.indexOf(component);
-                            const isExpanded = expandedComponents.has(originalIndex);
                             const componentName = getComponentInstanceTypeName(component);
+                            // 使用组件类型名判断展开状态（未在折叠集合中 = 展开）
+                            const isExpanded = !collapsedComponentTypes.has(componentName);
                             const componentInfo = componentRegistry?.getComponent(componentName);
                             const iconName = (componentInfo as { icon?: string } | undefined)?.icon;
                             const IconComponent = iconName && (LucideIcons as unknown as Record<string, React.ComponentType<{ size?: number }>>)[iconName];
@@ -399,7 +504,7 @@ export function EntityInspector({ entity, messageHub, commandManager, componentV
                                 >
                                     <div
                                         className="component-item-header"
-                                        onClick={() => toggleComponentExpanded(originalIndex)}
+                                        onClick={() => toggleComponentExpanded(componentName)}
                                     >
                                         <span className="component-expand-icon">
                                             {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}

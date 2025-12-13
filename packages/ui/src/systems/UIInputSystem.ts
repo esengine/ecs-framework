@@ -1,4 +1,5 @@
 import { EntitySystem, Matcher, Entity, Time, ECSSystem } from '@esengine/ecs-framework';
+import { sortingLayerManager, MouseButton } from '@esengine/engine-core';
 import { UITransformComponent } from '../components/UITransformComponent';
 import { UIInteractableComponent } from '../components/UIInteractableComponent';
 import { UIButtonComponent } from '../components/widgets/UIButtonComponent';
@@ -6,15 +7,9 @@ import { UISliderComponent } from '../components/widgets/UISliderComponent';
 import { UIScrollViewComponent } from '../components/widgets/UIScrollViewComponent';
 import type { UILayoutSystem } from './UILayoutSystem';
 
-/**
- * 鼠标按钮
- * Mouse buttons
- */
-export enum MouseButton {
-    Left = 0,
-    Middle = 1,
-    Right = 2
-}
+// Re-export MouseButton for backward compatibility
+// 为向后兼容重新导出 MouseButton
+export { MouseButton };
 
 /**
  * 输入事件数据
@@ -210,11 +205,14 @@ export class UIInputSystem extends EntitySystem {
 
         const dt = Time.deltaTime;
 
-        // 按 zIndex 从高到低排序，确保上层元素优先处理
+        // 按 sortKey 从高到低排序，确保上层元素优先处理
+        // Sort by sortKey from high to low, ensuring top elements are processed first
         const sorted = [...entities].sort((a, b) => {
             const ta = a.getComponent(UITransformComponent)!;
             const tb = b.getComponent(UITransformComponent)!;
-            return tb.zIndex - ta.zIndex;
+            const sortKeyA = sortingLayerManager.getSortKey(ta.sortingLayer, ta.orderInLayer);
+            const sortKeyB = sortingLayerManager.getSortKey(tb.sortingLayer, tb.orderInLayer);
+            return sortKeyB - sortKeyA;
         });
 
         let consumed = false;
@@ -225,8 +223,9 @@ export class UIInputSystem extends EntitySystem {
             const transform = entity.getComponent(UITransformComponent)!;
             const interactable = entity.getComponent(UIInteractableComponent)!;
 
-            // 跳过不可见或禁用的元素
-            if (!transform.visible || !interactable.enabled) {
+            // 跳过不可见或禁用的元素（使用 worldVisible 考虑父级可见性）
+            // Skip invisible or disabled elements (use worldVisible to consider parent visibility)
+            if (!transform.worldVisible || !interactable.enabled) {
                 // 如果之前悬停，触发离开
                 if (interactable.hovered) {
                     this.handleMouseLeave(entity, interactable);

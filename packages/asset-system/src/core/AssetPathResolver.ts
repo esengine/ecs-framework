@@ -233,9 +233,3 @@ export class AssetPathResolver {
         return path.replace(/\\/g, '/').replace(/\/+/g, '/');
     }
 }
-
-/**
- * Global asset path resolver instance
- * 全局资产路径解析器实例
- */
-export const globalPathResolver = new AssetPathResolver();

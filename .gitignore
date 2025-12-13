@@ -48,6 +48,14 @@ logs/
 .env.test.local
 .env.production.local
 
+# 代码签名证书（敏感文件）
+certs/
+*.pfx
+*.p12
+*.cer
+*.pem
+*.key
+
 # 测试覆盖率
 coverage/
 *.lcov

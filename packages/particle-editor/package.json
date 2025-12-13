@@ -32,6 +32,7 @@
         "@esengine/engine-core": "workspace:*",
         "@esengine/editor-core": "workspace:*",
         "@esengine/editor-runtime": "workspace:*",
+        "@esengine/asset-system": "workspace:*",
         "@esengine/build-config": "workspace:*",
         "lucide-react": "^0.545.0",
         "react": "^18.3.1",
