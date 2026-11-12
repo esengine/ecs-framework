@@ -13,7 +13,7 @@ description: "Cocos Creator 蓝图可视化脚本编辑器完整使用教程"
 
 从 GitHub Release 下载最新版本（免费）：
 
-**[下载 Cocos Node Editor v1.2.4](https://github.com/esengine/esengine/releases/tag/cocos-node-editor-v1.2.4)**
+**[下载 Cocos Node Editor v1.2.4](https://github.com/esengine/ecs-framework/releases/tag/cocos-node-editor-v1.2.4)**
 
 :::tip[更新]
 **v1.2.4**：`@BlueprintProperty` / `@BlueprintInput` / `@BlueprintOutput` 现在支持**无 TS 类型注解**的属性（如 `current = 100`，类型取装饰器的 `type` 字段），此前只有写了 `current: number` 才会生成 Get/Set 节点。

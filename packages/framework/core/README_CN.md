@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@esengine/ecs-framework"><img src="https://img.shields.io/npm/v/@esengine/ecs-framework?style=flat-square&color=blue" alt="npm"></a>
-  <a href="https://github.com/esengine/esengine/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="license"></a>
+  <a href="https://github.com/esengine/ecs-framework/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="license"></a>
   <img src="https://img.shields.io/badge/TypeScript-5.0+-blue?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/zero-dependencies-brightgreen?style=flat-square" alt="零依赖">
 </p>
@@ -29,7 +29,7 @@
 - **Phaser**
 - **或你自己的引擎**
 
-这个包是 [ESEngine](https://github.com/esengine/esengine) 的核心，但可以完全独立使用。
+这个包是 [ESEngine](https://github.com/esengine/ecs-framework) 的核心，但可以完全独立使用。
 
 ## 安装
 
@@ -45,7 +45,7 @@ npm install @esengine/ecs-framework
 
 ```bash
 # 第一步：克隆仓库骨架，不下载文件内容（需要 Git 2.25+）
-git clone --filter=blob:none --sparse https://github.com/esengine/esengine.git
+git clone --filter=blob:none --sparse https://github.com/esengine/ecs-framework.git
 
 # 第二步：进入目录
 cd esengine
@@ -184,5 +184,5 @@ MIT 协议 - 可自由用于商业和开源项目。
 ---
 
 <p align="center">
-  <a href="https://github.com/esengine/esengine">ESEngine</a> 的一部分 · 可独立使用
+  <a href="https://github.com/esengine/ecs-framework">ESEngine</a> 的一部分 · 可独立使用
 </p>

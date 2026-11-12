@@ -9,7 +9,7 @@ description: "与 ECS 框架深度集成的可视化脚本系统"
 
 Cocos Creator 蓝图编辑器插件（免费）：
 
-**[下载 Cocos Node Editor v1.2.0](https://github.com/esengine/esengine/releases/tag/cocos-node-editor-v1.2.0)**
+**[下载 Cocos Node Editor v1.2.0](https://github.com/esengine/ecs-framework/releases/tag/cocos-node-editor-v1.2.0)**
 
 > 技术交流 QQ 群：**481923584** | 官网：[esengine.cn](https://esengine.cn/)
 

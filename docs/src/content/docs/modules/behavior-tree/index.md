@@ -194,6 +194,6 @@ export class AttackAction implements INodeExecutor {
 
 ## 获取帮助
 
-- 提交 [Issue](https://github.com/esengine/esengine/issues)
+- 提交 [Issue](https://github.com/esengine/ecs-framework/issues)
 - 加入社区讨论
 - 参考文档中的完整代码示例

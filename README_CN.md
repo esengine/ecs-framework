@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="https://raw.githubusercontent.com/esengine/esengine/master/docs/public/logo.svg" alt="ESEngine" width="180">
+  <img src="https://raw.githubusercontent.com/esengine/ecs-framework/master/docs/public/logo.svg" alt="ESEngine" width="180">
   <br>
   ESEngine
 </h1>
@@ -10,9 +10,9 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@esengine/ecs-framework"><img src="https://img.shields.io/npm/v/@esengine/ecs-framework?style=flat-square&color=blue" alt="npm"></a>
-  <a href="https://github.com/esengine/esengine/actions"><img src="https://img.shields.io/github/actions/workflow/status/esengine/esengine/ci.yml?branch=master&style=flat-square" alt="build"></a>
-  <a href="https://github.com/esengine/esengine/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="license"></a>
-  <a href="https://github.com/esengine/esengine/stargazers"><img src="https://img.shields.io/github/stars/esengine/esengine?style=flat-square" alt="stars"></a>
+  <a href="https://github.com/esengine/ecs-framework/actions"><img src="https://img.shields.io/github/actions/workflow/status/esengine/ecs-framework/ci.yml?branch=master&style=flat-square" alt="build"></a>
+  <a href="https://github.com/esengine/ecs-framework/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="license"></a>
+  <a href="https://github.com/esengine/ecs-framework/stargazers"><img src="https://img.shields.io/github/stars/esengine/ecs-framework?style=flat-square" alt="stars"></a>
   <img src="https://img.shields.io/badge/TypeScript-5.0+-blue?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
   <a href="https://discord.gg/gCAgzXFW"><img src="https://img.shields.io/badge/Discord-Join%20Us-5865F2?style=flat-square&logo=discord&logoColor=white" alt="Discord"></a>
 </p>
@@ -215,7 +215,7 @@ npm install @esengine/world-streaming    # 世界流送
 ## 从源码构建
 
 ```bash
-git clone https://github.com/esengine/esengine.git
+git clone https://github.com/esengine/ecs-framework.git
 cd esengine
 
 pnpm install
@@ -238,8 +238,8 @@ pnpm test
 
 - [QQ 交流群](https://jq.qq.com/?_wv=1027&k=29w1Nud6) - 中文社区
 - [Discord](https://discord.gg/gCAgzXFW) - 国际社区
-- [GitHub Issues](https://github.com/esengine/esengine/issues) - Bug 反馈和功能建议
-- [GitHub Discussions](https://github.com/esengine/esengine/discussions) - 问题和想法
+- [GitHub Issues](https://github.com/esengine/ecs-framework/issues) - Bug 反馈和功能建议
+- [GitHub Discussions](https://github.com/esengine/ecs-framework/discussions) - 问题和想法
 
 ## 贡献
 

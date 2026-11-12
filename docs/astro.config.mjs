@@ -19,7 +19,7 @@ export default defineConfig({
         replacesTitle: false,
       },
       social: [
-        { icon: 'github', label: 'GitHub', href: 'https://github.com/esengine/esengine' }
+        { icon: 'github', label: 'GitHub', href: 'https://github.com/esengine/ecs-framework' }
       ],
       defaultLocale: 'root',
       locales: {
@@ -396,14 +396,14 @@ export default defineConfig({
           label: '更新日志',
           translations: { en: 'Changelog' },
           items: [
-            { label: '@esengine/ecs-framework', link: 'https://github.com/esengine/esengine/blob/master/packages/framework/core/CHANGELOG.md', attrs: { target: '_blank' } },
-            { label: '@esengine/behavior-tree', link: 'https://github.com/esengine/esengine/blob/master/packages/framework/behavior-tree/CHANGELOG.md', attrs: { target: '_blank' } },
-            { label: '@esengine/fsm', link: 'https://github.com/esengine/esengine/blob/master/packages/framework/fsm/CHANGELOG.md', attrs: { target: '_blank' } },
-            { label: '@esengine/timer', link: 'https://github.com/esengine/esengine/blob/master/packages/framework/timer/CHANGELOG.md', attrs: { target: '_blank' } },
-            { label: '@esengine/network', link: 'https://github.com/esengine/esengine/blob/master/packages/framework/network/CHANGELOG.md', attrs: { target: '_blank' } },
-            { label: '@esengine/transaction', link: 'https://github.com/esengine/esengine/blob/master/packages/framework/transaction/CHANGELOG.md', attrs: { target: '_blank' } },
-            { label: '@esengine/rpc', link: 'https://github.com/esengine/esengine/blob/master/packages/framework/rpc/CHANGELOG.md', attrs: { target: '_blank' } },
-            { label: '@esengine/cli', link: 'https://github.com/esengine/esengine/blob/master/packages/tools/cli/CHANGELOG.md', attrs: { target: '_blank' } },
+            { label: '@esengine/ecs-framework', link: 'https://github.com/esengine/ecs-framework/blob/master/packages/framework/core/CHANGELOG.md', attrs: { target: '_blank' } },
+            { label: '@esengine/behavior-tree', link: 'https://github.com/esengine/ecs-framework/blob/master/packages/framework/behavior-tree/CHANGELOG.md', attrs: { target: '_blank' } },
+            { label: '@esengine/fsm', link: 'https://github.com/esengine/ecs-framework/blob/master/packages/framework/fsm/CHANGELOG.md', attrs: { target: '_blank' } },
+            { label: '@esengine/timer', link: 'https://github.com/esengine/ecs-framework/blob/master/packages/framework/timer/CHANGELOG.md', attrs: { target: '_blank' } },
+            { label: '@esengine/network', link: 'https://github.com/esengine/ecs-framework/blob/master/packages/framework/network/CHANGELOG.md', attrs: { target: '_blank' } },
+            { label: '@esengine/transaction', link: 'https://github.com/esengine/ecs-framework/blob/master/packages/framework/transaction/CHANGELOG.md', attrs: { target: '_blank' } },
+            { label: '@esengine/rpc', link: 'https://github.com/esengine/ecs-framework/blob/master/packages/framework/rpc/CHANGELOG.md', attrs: { target: '_blank' } },
+            { label: '@esengine/cli', link: 'https://github.com/esengine/ecs-framework/blob/master/packages/tools/cli/CHANGELOG.md', attrs: { target: '_blank' } },
           ],
         },
       ],

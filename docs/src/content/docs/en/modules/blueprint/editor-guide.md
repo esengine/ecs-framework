@@ -13,7 +13,7 @@ This guide covers how to use the Blueprint Visual Scripting Editor in Cocos Crea
 
 Download the latest version from GitHub Release (Free):
 
-**[Download Cocos Node Editor v1.2.4](https://github.com/esengine/esengine/releases/tag/cocos-node-editor-v1.2.4)**
+**[Download Cocos Node Editor v1.2.4](https://github.com/esengine/ecs-framework/releases/tag/cocos-node-editor-v1.2.4)**
 
 :::tip[What's new]
 **v1.2.4**: `@BlueprintProperty` / `@BlueprintInput` / `@BlueprintOutput` now support properties **without a TS type annotation** (e.g. `current = 100`, type taken from the decorator's `type` field); previously only `current: number` would generate Get/Set nodes.

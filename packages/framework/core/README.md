@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@esengine/ecs-framework"><img src="https://img.shields.io/npm/v/@esengine/ecs-framework?style=flat-square&color=blue" alt="npm"></a>
-  <a href="https://github.com/esengine/esengine/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="license"></a>
+  <a href="https://github.com/esengine/ecs-framework/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="license"></a>
   <img src="https://img.shields.io/badge/TypeScript-5.0+-blue?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/zero-dependencies-brightgreen?style=flat-square" alt="zero dependencies">
 </p>
@@ -29,7 +29,7 @@ A standalone, zero-dependency ECS (Entity-Component-System) framework designed f
 - **Phaser**
 - **Or your own engine**
 
-This package is the core of [ESEngine](https://github.com/esengine/esengine), but can be used completely independently.
+This package is the core of [ESEngine](https://github.com/esengine/ecs-framework), but can be used completely independently.
 
 ## Installation
 
@@ -45,7 +45,7 @@ If you only want the ECS framework source code (not the full ESEngine):
 
 ```bash
 # Step 1: Clone repo skeleton without downloading files (requires Git 2.25+)
-git clone --filter=blob:none --sparse https://github.com/esengine/esengine.git
+git clone --filter=blob:none --sparse https://github.com/esengine/ecs-framework.git
 
 # Step 2: Enter directory
 cd esengine
@@ -184,5 +184,5 @@ MIT License - Use freely in commercial and open source projects.
 ---
 
 <p align="center">
-  Part of <a href="https://github.com/esengine/esengine">ESEngine</a> · Can be used standalone
+  Part of <a href="https://github.com/esengine/ecs-framework">ESEngine</a> · Can be used standalone
 </p>

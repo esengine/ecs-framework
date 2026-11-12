@@ -252,7 +252,7 @@ export class MySystem extends EntitySystem {
 
 ## Documentation
 
-- [ESEngine ECS Framework](https://github.com/esengine/esengine)
+- [ESEngine ECS Framework](https://github.com/esengine/ecs-framework)
 - [LayaAir Documentation](https://layaair.com/)
 
 ## Network

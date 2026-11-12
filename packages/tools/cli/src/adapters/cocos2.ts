@@ -253,7 +253,7 @@ export class MySystem extends EntitySystem {
 
 ## Documentation
 
-- [ESEngine ECS Framework](https://github.com/esengine/esengine)
+- [ESEngine ECS Framework](https://github.com/esengine/ecs-framework)
 - [Cocos Creator 2.x Docs](https://docs.cocos.com/creator/2.4/manual/)
 `;
 }

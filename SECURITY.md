@@ -17,7 +17,7 @@ If you discover a security vulnerability, please report it through the following
 
 ### Reporting Channels
 
-- **GitHub Security Advisories**: [Report a vulnerability](https://github.com/esengine/esengine/security/advisories/new) (Recommended)
+- **GitHub Security Advisories**: [Report a vulnerability](https://github.com/esengine/ecs-framework/security/advisories/new) (Recommended)
 - **Email**: security@esengine.dev
 
 ### Reporting Guidelines
@@ -73,7 +73,7 @@ When using ESEngine, please follow these security recommendations:
 
 ### 报告渠道
 
-- **GitHub 安全公告**: [报告漏洞](https://github.com/esengine/esengine/security/advisories/new)（推荐）
+- **GitHub 安全公告**: [报告漏洞](https://github.com/esengine/ecs-framework/security/advisories/new)（推荐）
 - **邮箱**: security@esengine.dev
 
 ### 报告指南
